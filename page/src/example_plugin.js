@@ -1,0 +1,1 @@
+console.log("Loaded example_plugin.js");
