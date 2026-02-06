@@ -15,7 +15,7 @@ app.mount('/static/', static)
 
 @app.get("/")
 def root(request: Request):
-    return templates.TemplateResponse("index.html.jinja", {"request": request})
+    return templates.TemplateResponse("dev.html.jinja", {"request": request})
 
 client_manager.enqueue_message("test", Message(operation="load_plugin", data={"url": "static/src/plugins/testplugin.js", "id": "testplugin"}))
 client_manager.enqueue_message("test", Message(operation="eval_js", data={"code": "document.body.innerHTML += '<p>Test message from server</p>'", "id": "eval1"}))

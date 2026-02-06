@@ -66,3 +66,5 @@ class WebsocketPlugin extends CommunicationPlugin {
 }
 
 register_communication_plugin(WebsocketPlugin);
+
+export { WebsocketPlugin };

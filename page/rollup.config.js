@@ -20,5 +20,6 @@ export default {
             comments: false
         }
     })
-  ]
+  ],
+  preserveSymlinks: true
 };

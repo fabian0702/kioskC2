@@ -1,5 +1,2 @@
-const plugins = import.meta.glob("./plugins/*.js", { eager: true });
-
-for (const mod of Object.values(plugins)) {
-  console.log(`imported plugin: ${mod.default}`);
-}
+import { WebsocketPlugin } from "./plugins/wsclient.js";
+import { XhrPlugin } from "./plugins/xhrclient.js";

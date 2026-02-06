@@ -49,3 +49,5 @@ class XhrPlugin extends CommunicationPlugin {
 }
 
 register_communication_plugin(XhrPlugin);
+
+export { XhrPlugin };
