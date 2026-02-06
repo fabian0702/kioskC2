@@ -1,7 +1,7 @@
 import terser from '@rollup/plugin-terser';
 
 export default {
-  input: 'src/script.js',
+  input: 'src/bundle.js',
   output: {
     file: 'dist/bundle.min.js',
     format: 'iife',

@@ -1,3 +1,5 @@
-*/node_modules
-*/__pycache__/
-*/*.pyc
+**/node_modules
+**/__pycache__
+**/*.pyc
+**/*.min.js
+**/*.min.js.map

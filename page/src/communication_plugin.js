@@ -6,6 +6,7 @@ var active_plugin = null;
 class CommuncationPlugin {
     name;
     on_msg_callback;
+    priority = -1;
     on_msg(_callback) {
         throw new Error("CommuncationPlugin.on_msg() must be overridden by a child class");
     }
@@ -30,6 +31,8 @@ function register_communication_plugin(plugin) {
 }
 
 function find_plugin() {
+    plugins.sort((a, b) => b.prototype.priority - a.prototype.priority);
+
     for (const PluginClass of plugins) {
         try {
             const plugin_instance = new PluginClass();
@@ -45,43 +48,62 @@ function establish_communication() {
     console.log("Establishing communication...");
     active_plugin = find_plugin();
     if (!active_plugin) {
-        throw new Error("No communication plugin could be established");
+        console.error("No communication plugin could be established");
     }
 
     active_plugin.on_msg((msg) => {
-        console.log("Received message:", msg);
+        var msgs = [];
+
         try {
-            if (typeof msg === "string") 
-                msg = JSON.parse(msg);
+            if (typeof msg === "string")
+                msgs = JSON.parse(msg);
         } catch (err) {
             console.error("Failed to parse incoming message as JSON:", msg, err);
             return;
         }
-        let operation = msg?.operation;
-        let data = msg?.data;
 
-        if (!operation) {
-            console.error("Received message without operation:", msg);
-            return;
+        for (const msg of msgs) {
+            console.log("Received message:", msg);
+
+            let operation = msg?.operation;
+            let data = msg?.data;
+
+            if (!operation) {
+                console.error("Received message without operation:", msg);
+                return;
+            }
+            const callbacks = on_message_callbacks[operation] || [];
+
+            if (callbacks.length === 0)
+                console.warn(`No callbacks registered for operation: ${operation}`);
+
+            for (const callback of callbacks)
+                callback(data);
         }
-        const callbacks = on_message_callbacks[operation] || [];
-        if (callbacks.length === 0) {
-            console.warn(`No callbacks registered for operation: ${operation}`);
-            return;
-        }
-        callbacks.forEach((callback) => callback(data));
     });
 
-    plugin_send_function = active_plugin.send.bind(active_plugin);
+    plugin_send_function = function(data) {
+        try {
+            return active_plugin.send(data);
+        } catch (err) {
+            console.error("Failed to send message:", err);
+        }
+    };
 
     return active_plugin;
 }
 
 function send_message(data) {
     if (!plugin_send_function) {
-        throw new Error("Communication plugin not established");
+        console.error("Communication plugin not established");
+        return;
     }
-    plugin_send_function(data);
+    console.log("Sending message:", data);
+    try {
+        plugin_send_function(data);
+    } catch (err) {
+        console.error("Failed to send message:", err);
+    }
 }
 
 function register_message_callback(operation, callback) {
@@ -95,11 +117,11 @@ function teardown_communication() {
     active_plugin.teardown();
     active_plugin = null;
     plugin_send_function = null;
-    on_message_callbacks = [];
+    // on_message_callbacks = [];
 }
 
 export {
-    CommuncationPlugin, 
+    CommuncationPlugin,
     register_communication_plugin,
     establish_communication,
     teardown_communication,

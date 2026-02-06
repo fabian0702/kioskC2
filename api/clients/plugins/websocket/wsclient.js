@@ -1,13 +1,14 @@
-import { CommuncationPlugin, register_communication_plugin } from './communication_plugin.js';
+import { CommuncationPlugin as CommunicationPlugin, register_communication_plugin } from '../communication_plugin.js';
 
-class WebsocketPlugin extends CommuncationPlugin {
+class WebsocketPlugin extends CommunicationPlugin {
     ws;
     ws_ready_promise;
     name = "WebsocketPlugin";
+    priority = 10;
     constructor() {
         super();
 
-        this.ws = new WebSocket(`ws://${window.location.host}/ws`);
+        this.ws = new WebSocket(`ws://${window.location.host}/clients/ws/`);
 
         this.ws_ready_promise = new Promise((resolve, reject) => {
             this.ws.addEventListener("open", () => {
@@ -19,6 +20,7 @@ class WebsocketPlugin extends CommuncationPlugin {
 
             this.ws.addEventListener("error", (err) => {
                     console.error("WebsocketPlugin: WebSocket error", err);
+                    this.ws = null;
                     reject(err);
                 },
                 { once: true }
@@ -43,7 +45,8 @@ class WebsocketPlugin extends CommuncationPlugin {
         this.ws_ready_promise
             .then(() => {
                 const payload = typeof data === "string" ? data : JSON.stringify(data);
-                this.ws.send(payload);
+                if (this.ws) 
+                    this.ws.send(payload);
             })
             .catch((err) => {
                 console.error("WebsocketPlugin: Failed to send message, WebSocket not ready", err);

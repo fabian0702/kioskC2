@@ -1,0 +1,1 @@
+/home/ubuntu/projects/kioskC2/api/clients/plugins/xhr/xhrclient.js
