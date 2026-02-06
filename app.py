@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 
 from api.clients.clients import client_router, client_manager, Message
 
@@ -14,7 +15,11 @@ static = StaticFiles(directory='page/', follow_symlink=True)
 app.mount('/static/', static)
 
 @app.get("/")
-def root(request: Request):
+def root():
+    return RedirectResponse(url="http://test.localhost:8000/client")
+
+@app.get("/client")
+def client_page(request: Request):
     return templates.TemplateResponse("dev.html.jinja", {"request": request})
 
 client_manager.enqueue_message("test", Message(operation="load_plugin", data={"url": "static/src/plugins/testplugin.js", "id": "testplugin"}))
