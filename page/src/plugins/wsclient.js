@@ -1,1 +1,0 @@
-/home/ubuntu/projects/kioskC2/api/clients/plugins/websocket/wsclient.js

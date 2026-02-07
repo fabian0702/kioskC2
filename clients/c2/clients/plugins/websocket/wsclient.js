@@ -10,24 +10,16 @@ class WebsocketPlugin extends CommunicationPlugin {
 
         this.ws = new WebSocket(`ws://${window.location.host}/clients/ws/`);
 
-        this.ws_ready_promise = new Promise((resolve, reject) => {
-            this.ws.addEventListener("open", () => {
-                    console.log("WebsocketPlugin: Connected to WebSocket");
-                    resolve();
-                },
-                { once: true }
-            );
+        this.ws.addEventListener("open", () => {
+            console.log("WebsocketPlugin: Connected to WebSocket");
+        });
 
-            this.ws.addEventListener("error", (err) => {
-                    console.error("WebsocketPlugin: WebSocket error", err);
-                    this.ws = null;
-                    reject(err);
-                },
-                { once: true }
-            );
+        this.ws.addEventListener("error", (err) => {
+            console.error("WebsocketPlugin: WebSocket error", err);
+            this.ws = null;
         });
     }
-    
+
     on_msg(_callback) {
         if (!this.ws || _callback === null) {
             throw new Error("WebsocketPlugin: WebSocket not initialized or callback is null");
@@ -42,15 +34,17 @@ class WebsocketPlugin extends CommunicationPlugin {
             console.warn("WebsocketPlugin: WebSocket not initialized");
             return;
         }
-        this.ws_ready_promise
-            .then(() => {
+        const retry = (attempts = 0, maxAttempts = 5, delay = 100) => {
+            if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 const payload = typeof data === "string" ? data : JSON.stringify(data);
-                if (this.ws) 
-                    this.ws.send(payload);
-            })
-            .catch((err) => {
-                console.error("WebsocketPlugin: Failed to send message, WebSocket not ready", err);
-            });
+                this.ws.send(payload);
+            } else if (attempts < maxAttempts) {
+                setTimeout(() => retry(attempts + 1, maxAttempts, delay), delay);
+            } else {
+                console.error("WebsocketPlugin: Failed to send message after retries");
+            }
+        };
+        retry();
     }
 
     teardown() {
@@ -58,9 +52,6 @@ class WebsocketPlugin extends CommunicationPlugin {
         if (this.ws) {
             this.ws.close();
             this.ws = null;
-        }
-        if (this.ws_ready_promise) {
-            this.ws_ready_promise = null;
         }
     }
 }

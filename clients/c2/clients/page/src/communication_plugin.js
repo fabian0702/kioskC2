@@ -90,6 +90,8 @@ function establish_communication() {
         }
     };
 
+    active_plugin.send({ operation: "connect", data: "" });
+
     return active_plugin;
 }
 

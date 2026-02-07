@@ -1,10 +1,11 @@
+from fastapi import Request
 from fastapi.routing import APIRouter
 from pydantic import BaseModel
-from typing import ClassVar, Any
+from typing import ClassVar, Any, Callable, Awaitable
 
 import inspect
 
-from page.builder import add_js_plugin
+from c2.clients.page.builder import add_js_plugin
 import os
 
 class Message(BaseModel):
@@ -27,7 +28,7 @@ class Client:
 
         print(f"Preparing response for client {self.id} with message: {message}")
 
-        response = await handle_message(message)
+        response = await handle_message(self.id, message)
 
         responses = [response] + self.queued_requests
         self.queued_requests = []
@@ -43,9 +44,30 @@ class Client:
         """Update the internal data if the client reconnects."""
         pass
 
+    @classmethod
+    def get_client(cls, request: Request):
+        hostheader = request.headers.get("host")
+        id, *_ = hostheader.split(".")
+        return client_manager.get_client(id, client_class=cls)
+
 class ClientManager:
     def __init__(self):
+        self.on_msg_callback:Callable[[str, Message], None] = None
         self.clients: dict[str, Client] = {}
+
+    def on_msg(self, callback:Callable[[str, Message], None]):
+        self.on_msg_callback = callback
+
+    async def msg_call(self, id:str, msg:Message):
+        print(f"ClientManager received message for client {id}: {msg}")
+
+        if not self.on_msg_callback:
+            return
+
+        res = self.on_msg_callback(id, msg)
+
+        if isinstance(res, Awaitable):
+            await res
 
     def add_client(self, client: Client):
         if client.id in self.clients:
@@ -65,14 +87,14 @@ class ClientManager:
 
 client_manager = ClientManager()
 
-async def handle_message(message: Message) -> Message:
+async def handle_message(client_id:str, message: Message) -> Message:
     match message.operation:
         case "heartbeat":
             if message.data != "ping":
                 None
             return Message(operation="heartbeat", data="pong")
         case _:
-            print(f"Unknown operation: {message.operation}")
+            await client_manager.msg_call(client_id, message)
 
 def register_client(client_class: type[Client]):
     """Decorator to register a client class. The client class must inherit from Client and implement the required methods."""

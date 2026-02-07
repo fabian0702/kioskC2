@@ -1,0 +1,19 @@
+services:
+  nats:
+    image: nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
+    command: "-js -m 8222"
+    # volumes:
+    #   - ./nats-server.conf:/etc/nats/nats-server.conf
+    restart: unless-stopped
+
+  clients:
+    build: ./clients
+    depends_on:
+      - nats
+    restart: unless-stopped
+    ports:
+      - "8000:8000"

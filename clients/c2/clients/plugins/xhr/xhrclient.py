@@ -1,18 +1,13 @@
-from fastapi import APIRouter
-from api.clients.base import Client, client_manager, register_client, Message
-from fastapi import Request
+from fastapi import APIRouter, Request
+
+from c2.clients.base import Client, Message, register_client
+
 
 xhrrouter = APIRouter(prefix="/xhr")
 
 class XHRClient(Client):
     router = xhrrouter
     js_plugin = "xhrclient.js"
-    
-    @staticmethod
-    def get_client(request: Request) -> "XHRClient":
-        hostheader = request.headers.get("host")
-        id, *_ = hostheader.split(".")
-        return client_manager.get_client(id, client_class=XHRClient)
 
 @xhrrouter.post("/")
 async def xhr_endpoint(request: Request, msg:Message):
