@@ -7,10 +7,13 @@ from fastapi.responses import RedirectResponse
 from c2.clients.plugins.plugins import *
 from c2.clients.base import client_router
 from c2.clients.nats_client import run_nats
+from c2.clients.page.builder import build_dist
 
 import asyncio
 
 async def lifespan(app:FastAPI):
+    await build_dist()
+
     nats_task = asyncio.create_task(run_nats())
 
     yield
@@ -33,4 +36,4 @@ def root():
 
 @app.get("/client")
 def client_page(request: Request):
-    return templates.TemplateResponse("dev.html.jinja", {"request": request})
+    return templates.TemplateResponse("index.html.jinja", {"request": request})

@@ -8,9 +8,7 @@ async def main():
 
     js = nc.jetstream()
 
-    await js.add_stream(name="manager-operations", subjects=["manager.operations.*"])
-
-    await js.publish("manager.operations.test", b'{"operation":"load_plugin", "data":{"url": "static/src/plugins/testplugin.js", "id": "testplugin"}}')
+    await js.publish("manager.operations.test", b'{"operation":"load_plugin", "data":{"url": "static/testplugin.js", "id": "testplugin"}}')
     await js.publish("manager.operations.test", b'{"operation":"eval_js", "data":{"code": "document.body.innerHTML += \'<p>Test message from server</p>\'", "id": "eval1"}}')
 
     sub = await nc.subscribe("manager.responses.*")

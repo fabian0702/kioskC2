@@ -27,7 +27,7 @@ class CallbackManager:
 
         self.callbacks[id].set()
 
-    async def wait_for_callback(self, id:str, timeout:int=TIMEOUT, on_timeout:Callable[[], None]=None):
+    async def wait_for_callback(self, id:str, timeout:int=TIMEOUT, on_timeout:Callable[[str], None]=None):
         if not id in self.callbacks:
             self.create_callback(id)
         
@@ -39,19 +39,18 @@ class CallbackManager:
         if exception:
             traceback.print_exception(exception)
 
-    async def _wait_for_callback(self, id:str, timeout:int=TIMEOUT, on_timeout:Callable[[], None]=None):
+    async def _wait_for_callback(self, id:str, timeout:int=TIMEOUT, on_timeout:Callable[[str], None]=None):
         try:
             await asyncio.wait_for(self.callbacks[id].wait(), timeout=timeout)
         except asyncio.TimeoutError:
             print(f"Callback for id {id} timed out after {timeout}s")
             if on_timeout:
-                on_timeout()
+                await on_timeout(id)
         finally:
             del self.callbacks[id]
 
     async def cleanup(self, on_cleanup:Callable[[str], None]=None):
         for id in self.callbacks:
-            operation_id, client_id = id.split('.', maxsplit=1)
-            print(f"Cleaning up callback for operation {operation_id} and client {client_id}")
+            print(f"Cleaning up callback for operation {id}")
             if on_cleanup:
-                on_cleanup(operation_id)
+                await on_cleanup(id)

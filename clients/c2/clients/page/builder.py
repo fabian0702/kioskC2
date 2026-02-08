@@ -1,10 +1,9 @@
 
 import os
-import subprocess
+import nats
+import shutil
 
-PLUGIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'src/plugins/')
-
-NEEDS_REBUILD = False
+PLUGIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '/plugins/')
 
 def add_js_plugin(js_plugin:str):
     if not os.path.exists(PLUGIN_DIR):
@@ -19,19 +18,10 @@ def add_js_plugin(js_plugin:str):
 
     if os.path.exists(dest_path):
         os.remove(dest_path)
-    os.symlink(js_plugin, dest_path)
+    shutil.copy(js_plugin, dest_path)
 
-    global NEEDS_REBUILD
-    NEEDS_REBUILD = True
 
-def build_dist():
-    subprocess.run(['rollup', '-c', 'rollup.config.js'], check=True)
-
-def get_js_dist() -> str:
-    global NEEDS_REBUILD
-    if NEEDS_REBUILD:
-        build_dist()
-        NEEDS_REBUILD = False
-    
-    with open('./dist/bundle.js', 'r') as f:
-        return f.read()
+async def build_dist():
+    nc = await nats.connect("nats://nats:4222")
+    await nc.request("client.page-build", b'', timeout=10000)
+    await nc.drain()

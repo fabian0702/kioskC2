@@ -14,6 +14,26 @@ services:
     build: ./clients
     depends_on:
       - nats
+      - client-builder
     restart: unless-stopped
     ports:
       - "8000:8000"
+    volumes:
+      - ./clients/c2/clients/page/:/code/c2/clients/page/
+      - ./client-builder/src/plugins/:/plugins/
+  
+  client-builder:
+    build: ./client-builder
+    volumes:
+      - ./client-builder/src/:/app/src/
+      - ./clients/c2/clients/page/dist/:/app/dist/
+
+    depends_on:
+      - nats
+    restart: unless-stopped
+
+  manager:
+    build: ./manager
+    depends_on:
+      - nats
+    restart: unless-stopped

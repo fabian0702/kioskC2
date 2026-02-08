@@ -35,16 +35,14 @@ class Client:
         await self.nc.publish(f"manager.responses.{self.id}", message.model_dump_json().encode())
 
     async def wait_for_callback(self, operation_id:str):
-        id = f"{self.id}.{operation_id}"
-
-        await self.cbm.wait_for_callback(id, on_timeout=lambda: self.timeout_callback(id))
+        await self.cbm.wait_for_callback(operation_id, on_timeout=self.timeout_callback)
 
     async def handle_operations(self):
         try:
             manager_sub = await self.js.subscribe(f"manager.operations.{self.id}")
             
             async for msg in manager_sub.messages:
-                msg.ack()
+                await msg.ack()
                 try:
                     message = Message.model_validate_json(msg.data.decode())
                 except Exception as e:
@@ -73,7 +71,7 @@ class Client:
 
                 print(f"Received response for client {self.id} with {repr(message)}")
 
-                self.cbm.trigger_callback(f"{self.id}.{message.id}")
+                self.cbm.trigger_callback(message.id)
 
                 await self.nc.publish(f"manager.responses.{self.id}", message.model_dump_json().encode())
 

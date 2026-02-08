@@ -11,7 +11,7 @@ export default {
   plugins: [
     terser({
         compress: {
-            drop_console: true
+            drop_console: false
         },
         mangle: {
             toplevel: true

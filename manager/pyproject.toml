@@ -9,6 +9,7 @@ package-mode = false
 [tool.poetry.dependencies]
 python = "^3.12"
 nats-py = "^2.13.1"
+pydantic = "^2.12.5"
 
 
 [build-system]

@@ -23,4 +23,4 @@ RUN pip install -U poetry==2.1.4 \
 
 COPY ./c2/ /code/c2/
 
-CMD ["fastapi", "run", "c2/clients/app.py"]
+CMD ["python3", "c2/manager/main.py"]

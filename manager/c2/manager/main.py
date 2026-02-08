@@ -5,7 +5,11 @@ import nats
 from c2.manager.client import ClientManager
 
 async def main():
-    nc = await nats.connect("nats://localhost:4222")
+    print("Starting manager...")
+    nc = await nats.connect("nats://nats:4222")
+    js = nc.jetstream()
+
+    await js.add_stream(name="manager", subjects=["manager.operations.*"])
 
     client_manager = ClientManager(nc)
 

@@ -2,7 +2,6 @@ import { CommuncationPlugin as CommunicationPlugin, register_communication_plugi
 
 class WebsocketPlugin extends CommunicationPlugin {
     ws;
-    ws_ready_promise;
     name = "WebsocketPlugin";
     priority = 10;
     constructor() {
@@ -30,7 +29,7 @@ class WebsocketPlugin extends CommunicationPlugin {
     }
 
     send(data) {
-        if (!this.ws || !this.ws_ready_promise) {
+        if (!this.ws) {
             console.warn("WebsocketPlugin: WebSocket not initialized");
             return;
         }
