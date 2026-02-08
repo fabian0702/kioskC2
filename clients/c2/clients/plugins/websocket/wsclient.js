@@ -36,8 +36,13 @@ class WebsocketPlugin extends CommunicationPlugin {
         }
         const retry = (attempts = 0, maxAttempts = 5, delay = 100) => {
             if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-                const payload = typeof data === "string" ? data : JSON.stringify(data);
-                this.ws.send(payload);
+                try {
+                    const payload = typeof data === "string" ? data : JSON.stringify(data);
+                    this.ws.send(payload);
+                } catch (err) {
+                    console.error("WebsocketPlugin: Failed to serialize data for sending", err);
+                    return;
+                }
             } else if (attempts < maxAttempts) {
                 setTimeout(() => retry(attempts + 1, maxAttempts, delay), delay);
             } else {

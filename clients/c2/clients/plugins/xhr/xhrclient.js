@@ -12,7 +12,7 @@ class XhrPlugin extends CommunicationPlugin {
 
         this._callback = null;
     }
-    
+
     on_msg(_callback) {
         console.log("XHRPlugin: Registered message callback");
         this._callback = _callback;
@@ -23,7 +23,7 @@ class XhrPlugin extends CommunicationPlugin {
         var xhr = new XMLHttpRequest();
         xhr.open("POST", this.request_url, true);
         xhr.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-        xhr.onreadystatechange = function() {
+        xhr.onreadystatechange = function () {
             if (xhr.readyState === XMLHttpRequest.DONE) {
                 if (xhr.status === 200) {
                     if (response_callback) {
@@ -40,7 +40,11 @@ class XhrPlugin extends CommunicationPlugin {
                 }
             }
         };
-        xhr.send(typeof data === "string" ? data : JSON.stringify(data));
+        try {
+            xhr.send(typeof data === "string" ? data : JSON.stringify(data));
+        } catch (err) {
+            console.error("XHRPlugin: Failed to serialize data for sending", err);
+        }
     }
 
     teardown() {

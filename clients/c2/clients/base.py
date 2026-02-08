@@ -1,6 +1,7 @@
+from secrets import token_hex
 from fastapi import Request
 from fastapi.routing import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import ClassVar, Any, Callable, Awaitable
 
 import inspect
@@ -11,6 +12,7 @@ import os
 class Message(BaseModel):
     operation: str
     data: Any
+    id:str
 
 client_router = APIRouter(prefix="/clients")
 
@@ -92,7 +94,7 @@ async def handle_message(client_id:str, message: Message) -> Message:
         case "heartbeat":
             if message.data != "ping":
                 None
-            return Message(operation="heartbeat", data="pong")
+            return Message(operation="heartbeat", data="pong", id=message.id)
         case _:
             await client_manager.msg_call(client_id, message)
 

@@ -67,6 +67,7 @@ function establish_communication() {
 
             let operation = msg?.operation;
             let data = msg?.data;
+            let id = msg?.id;
 
             if (!operation) {
                 console.error("Received message without operation:", msg);
@@ -78,7 +79,7 @@ function establish_communication() {
                 console.warn(`No callbacks registered for operation: ${operation}`);
 
             for (const callback of callbacks)
-                callback(data);
+                callback(data, id);
         }
     });
 
@@ -90,7 +91,7 @@ function establish_communication() {
         }
     };
 
-    active_plugin.send({ operation: "connect", data: "" });
+    active_plugin.send({ operation: "connect", data: "", id: crypto.randomUUID() });
 
     return active_plugin;
 }

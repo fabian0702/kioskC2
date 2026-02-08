@@ -6,14 +6,14 @@ const heartbeat_timeout = 2 * heartbeat_interval;
 function setup_heartbeat_monitor() {
     var last_heartbeat = null;
 
-    register_message_callback("heartbeat", (data) => {
+    register_message_callback("heartbeat", (data, id) => {
         console.log("Received heartbeat:", data);
         last_heartbeat = Date.now();
     });
 
     setInterval(() => {
         try {
-            send_message({ operation: "heartbeat", data: "ping" });
+            send_message({ operation: "heartbeat", data: "ping", id: crypto.randomUUID()});
         } catch (err) {
             console.error("Failed to send heartbeat message:", err);
         }
@@ -31,9 +31,8 @@ function setup_heartbeat_monitor() {
 }
 
 function setupPluginLoader() {
-    register_message_callback("load_plugin", (data) => {
+    register_message_callback("load_plugin", (data, id) => {
         var url = data?.url || null;
-        var id = data?.id || null;
 
         if (!url) {
             console.error("Received load_plugin message without URL");
@@ -45,20 +44,19 @@ function setupPluginLoader() {
         script.src = url;
         script.onload = () => {
             console.log(`Plugin script loaded: ${url}`);
-            send_message({ operation: "plugin_loaded", data: {id: id} });
+            send_message({ operation: "plugin_loaded", data: {}, id: id });
         };
         document.head.appendChild(script);
     });
 }
 
 function setupJsEval() {
-    register_message_callback("eval_js", (msg) => {
+    register_message_callback("eval_js", (msg, id) => {
         console.log("Received eval_js message");
 
         var result = null;
 
         var code = msg?.code || "";
-        var id = msg?.id || null;
 
         try {
             result = {result: new Function(code)()};
@@ -67,18 +65,7 @@ function setupJsEval() {
             console.error("Error evaluating JS code:", err);
         }
 
-        result.id = id;
-
-        if (typeof result != "string") {
-            try {
-                result = JSON.stringify(result || null);
-                console.log("Eval result serialized to JSON" + result);
-            } catch (err) {
-                result = `Unserializable result: ${err.toString()}`;
-            }
-        }
-
-        send_message({ operation: "eval_result", data: result });
+        send_message({ operation: "eval_result", data: result , id: id });
     });
 }
 
