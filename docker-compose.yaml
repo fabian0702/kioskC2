@@ -37,3 +37,9 @@ services:
     depends_on:
       - nats
     restart: unless-stopped
+
+  website-bundler:
+    build: ./website-bundler
+    depends_on:
+      - nats
+    restart: unless-stopped
