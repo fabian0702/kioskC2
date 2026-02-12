@@ -21,6 +21,7 @@ services:
     volumes:
       - ./clients/c2/clients/page/:/code/c2/clients/page/
       - ./client-builder/src/plugins/:/plugins/
+      - plugins:/plugins/
   
   client-builder:
     build: ./client-builder
@@ -32,14 +33,25 @@ services:
       - nats
     restart: unless-stopped
 
-  manager:
-    build: ./manager
-    depends_on:
-      - nats
-    restart: unless-stopped
+  # manager:
+  #   build: ./manager
+  #   depends_on:
+  #     - nats
+  #   restart: unless-stopped
 
   website-bundler:
     build: ./website-bundler
     depends_on:
       - nats
     restart: unless-stopped
+
+  plugins:
+    build: ./plugins
+    depends_on:
+      - nats
+    restart: unless-stopped
+    volumes:
+      - plugins:/plugins/
+
+volumes:
+  plugins:

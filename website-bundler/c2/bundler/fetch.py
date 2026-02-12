@@ -24,11 +24,7 @@ async def fetch_page(url: str) -> tuple[str, str]:
 
     content = await page.evaluate("singlefile.getPageData()")
 
-    title = await page.title()
-
     await browser.close()
     await playwright.stop()
 
-    sanitized_title = "".join(c for c in title if c.isalnum() or c in (" ", "_", "-")).rstrip()
-
-    return sanitized_title, content['content']
+    return content['content']

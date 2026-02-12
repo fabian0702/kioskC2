@@ -26,13 +26,13 @@ class Client:
         print(f"Client {self.id} failed to respond within {TIMEOUT}s for operation with id {operation_id}")
 
         message = Message(id=operation_id, operation='timeout', data={'error': f'The client failed to respond within {TIMEOUT}s'})
-        await self.nc.publish(f"manager.responses.{self.id}", message.model_dump_json().encode())
+        await self.nc.publish(f"manager.responses.{self.id}.{operation_id}", message.model_dump_json().encode())
 
     async def reconnect_callback(self, operation_id:str):
         print(f"Client {self.id} reconnected, resending queued messages")
 
         message = Message(id=operation_id, operation='reconnection', data={'error': f'The client failed to respond within {TIMEOUT}s'})
-        await self.nc.publish(f"manager.responses.{self.id}", message.model_dump_json().encode())
+        await self.nc.publish(f"manager.responses.{self.id}.{operation_id}", message.model_dump_json().encode())
 
     async def wait_for_callback(self, operation_id:str):
         await self.cbm.wait_for_callback(operation_id, on_timeout=self.timeout_callback)
@@ -73,7 +73,7 @@ class Client:
 
                 self.cbm.trigger_callback(message.id)
 
-                await self.nc.publish(f"manager.responses.{self.id}", message.model_dump_json().encode())
+                await self.nc.publish(f"manager.responses.{self.id}.{message.id}", message.model_dump_json().encode())
 
         except asyncio.CancelledError:
             await reponse_sub.unsubscribe()
@@ -94,7 +94,7 @@ class Client:
             if isinstance(result, Exception):
                 traceback.print_exception(result)
 
-        self.cbm.cleanup(on_cleanup=self.reconnect_callback)
+        await self.cbm.cleanup(on_cleanup=self.reconnect_callback)
 
     def terminate_client(self):
         self.run_task.cancel() 

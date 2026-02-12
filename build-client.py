@@ -10,7 +10,7 @@ async def main():
     print(f"Received response: {response.data.decode()}")
 
     js = nc.jetstream()
-    object_store = await js.object_store("pages")
+    object_store = await js.object_store("bundler")
     page_data = await object_store.get(response.data.decode())
     print(f"Page data: {page_data.data.decode()}")
 

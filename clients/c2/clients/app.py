@@ -30,6 +30,10 @@ templates = Jinja2Templates(directory="c2/clients/page")
 static = StaticFiles(directory='c2/clients/page/', follow_symlink=True)
 app.mount('/static/', static)
 
+plugins = StaticFiles(directory='/plugins/', follow_symlink=True)
+app.mount('/plugins/', plugins)
+
+
 @app.get("/")
 def root():
     return RedirectResponse(url="http://test.localhost:8000/client")
