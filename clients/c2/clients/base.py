@@ -9,7 +9,7 @@ import inspect
 from c2.clients.page.builder import add_js_plugin
 import os
 
-class Message(BaseModel):
+class ClientRunMessage(BaseModel):
     operation: str
     data: Any
     id:str
@@ -23,10 +23,10 @@ class Client:
     def __init__(self, id:str):
         self.id = id
         self.status = "connected"
-        self.queued_requests: list[Message] = []
+        self.queued_requests: list[ClientRunMessage] = []
 
     async def prepare_response(self, data:dict) -> list[dict]:
-        message = Message.model_validate(data)
+        message = ClientRunMessage.model_validate(data)
 
         print(f"Preparing response for client {self.id} with message: {message}")
 
@@ -39,7 +39,7 @@ class Client:
 
         return [msg.model_dump() for msg in responses if msg is not None]
     
-    def enqueue_message(self, message: Message):
+    def enqueue_message(self, message: ClientRunMessage):
         self.queued_requests.append(message)
 
     def update(self, *args, **kwargs):
@@ -54,13 +54,13 @@ class Client:
 
 class ClientManager:
     def __init__(self):
-        self.on_msg_callback:Callable[[str, Message], None] = None
+        self.on_msg_callback:Callable[[str, ClientRunMessage], None] = None
         self.clients: dict[str, Client] = {}
 
-    def on_msg(self, callback:Callable[[str, Message], None]):
+    def on_msg(self, callback:Callable[[str, ClientRunMessage], None]):
         self.on_msg_callback = callback
 
-    async def msg_call(self, id:str, msg:Message):
+    async def msg_call(self, id:str, msg:ClientRunMessage):
         print(f"ClientManager received message for client {id}: {msg}")
 
         if not self.on_msg_callback:
@@ -83,18 +83,18 @@ class ClientManager:
             self.clients[id].update(*args, **kwargs)
         return self.clients[id]
     
-    def enqueue_message(self, client_id:str, message: Message):
+    def enqueue_message(self, client_id:str, message: ClientRunMessage):
         client = self.get_client(client_id)
         client.enqueue_message(message)
 
 client_manager = ClientManager()
 
-async def handle_message(client_id:str, message: Message) -> Message:
+async def handle_message(client_id:str, message: ClientRunMessage) -> ClientRunMessage:
     match message.operation:
         case "heartbeat":
             if message.data != "ping":
                 None
-            return Message(operation="heartbeat", data="pong", id=message.id)
+            return ClientRunMessage(operation="heartbeat", data="pong", id=message.id)
         case _:
             await client_manager.msg_call(client_id, message)
 

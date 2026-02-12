@@ -6,6 +6,7 @@ class WebsitePlugin(BasePlugin):
 
     async def render(self, url: str) -> str:
         """Fetches the content of the given URL and returns it as a string."""
+        print('Running method website.render')
         return await self.methods.eval_js(f'''
             (async () => {{
                 if (!window.load_website_plugin) {{

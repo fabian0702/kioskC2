@@ -1,8 +1,6 @@
 import asyncio
 import nats
 
-from nats.js.errors import NotFoundError
-
 async def main():
     nc = await nats.connect("nats://localhost:4222")
 

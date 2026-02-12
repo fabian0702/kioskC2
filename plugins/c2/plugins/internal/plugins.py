@@ -13,7 +13,7 @@ class BasePlugin:
     def __init__(self):
         if not hasattr(self, "name"):
             raise NotImplementedError("Plugins must define 'name'")
-    
+        
     @classmethod
     async def new(cls, nc:NATS, client_id: str):
         """Called when the plugin is loaded. Can be used to perform any setup or initialization."""
