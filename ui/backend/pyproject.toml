@@ -11,6 +11,7 @@ python = "^3.12"
 nats-py = "^2.13.1"
 python-socketio = {extras = ["asyncio-client"], version = "^5.16.1"}
 uvicorn = "^0.40.0"
+pydantic = "^2.12.5"
 
 
 [build-system]

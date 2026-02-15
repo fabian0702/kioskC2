@@ -23,4 +23,4 @@ RUN pip install -U poetry==2.1.4 \
 
 COPY ./c2/ /code/c2/
 
-CMD ["python", "app.py"]
+CMD ["python", "c2/backend/app.py"]

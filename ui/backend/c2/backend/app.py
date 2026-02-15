@@ -1,72 +1,12 @@
 import asyncio
 import json
 
-from secrets import token_hex
-from typing import Any, Dict, List, Optional, Union
-
 import socketio
 import uvicorn
-import nats
-
-from nats.aio.client import Client as NATSClient
-from nats.js.client import JetStreamContext
-from nats.js.kv import KeyValue
-from nats.js.api import KeyValueConfig
-from nats.js.errors import BucketNotFoundError
 from nats.errors import TimeoutError as NATSTimeoutError
 
-from pydantic import BaseModel, Field
-
-
-NATS_URL = "nats://localhost:4222"
-
-Argument = Union[str, int, float, bool]
-
-class PluginMessage(BaseModel):
-    client_id: str
-    id: str = Field(default_factory=lambda: token_hex(16))
-    operation: str
-    data: Optional[Any] = None
-    args: List[Argument] = []
-    kwargs: Dict[str, Argument] = {}
-
-class AppState:
-    """
-    Encapsulates the application state to ensure type safety 
-    and avoid global variables.
-    """
-    def __init__(self):
-        self.nc: Optional[NATSClient] = None
-        self.js: Optional[JetStreamContext] = None
-        self.method_kv: Optional[KeyValue] = None
-        self.client_kv: Optional[KeyValue] = None
-
-    async def startup(self):
-        print(f"Connecting to NATS at {NATS_URL}...")
-        self.nc = await nats.connect(NATS_URL)
-        self.js = self.nc.jetstream()
-        
-        self.method_kv = await self._get_or_create_kv('methods')
-        self.client_kv = await self._get_or_create_kv('clients')
-        print("Startup complete")
-
-    async def shutdown(self):
-        if self.nc:
-            await self.nc.drain()
-            await self.nc.close()
-            print("Shutdown complete")
-    
-    async def _get_or_create_kv(self, bucket_name: str) -> KeyValue:
-        """Internal helper to fetch or create a KV bucket."""
-        if not self.js:
-            raise RuntimeError("JetStream context not initialized")
-
-        try:
-            return await self.js.key_value(bucket_name)
-        except BucketNotFoundError:
-            print(f"Bucket '{bucket_name}' not found. Creating...")
-            config = KeyValueConfig(bucket=bucket_name, history=5)
-            return await self.js.create_key_value(config)
+from c2.backend.classes import PluginMessage
+from c2.backend.state import AppState
 
 
 state = AppState()
@@ -144,4 +84,4 @@ async def run_plugin(sid: str, plugin_args: dict):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app=sio_app)
+    uvicorn.run(app=sio_app, port=8001, host='0.0.0.0')
