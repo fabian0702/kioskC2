@@ -16,7 +16,16 @@ class BasePlugin:
         
     @classmethod
     async def new(cls, nc:NATS, client_id: str):
-        """Called when the plugin is loaded. Can be used to perform any setup or initialization."""
+        """
+        Creates a new instance of the plugin while initializing some internal stuff
+        
+        :param nc: a instance of nats.py client
+        :type nc: NATS
+        :param client_id: The id of the client which is interacted with
+        :type client_id: str
+        :return: returns a new instance of the class
+        :rtype: Self
+        """
         self = cls()
         self.methods = Methods(nc, client_id)
 

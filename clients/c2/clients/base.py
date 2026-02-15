@@ -1,13 +1,17 @@
-from secrets import token_hex
 from fastapi import Request
 from fastapi.routing import APIRouter
-from pydantic import BaseModel, Field
-from typing import ClassVar, Any, Callable, Awaitable
+from pydantic import BaseModel
+from typing import ClassVar, Any, Callable, Awaitable, Literal, Optional
 
+import time
+import asyncio
 import inspect
 
 from c2.clients.page.builder import add_js_plugin
 import os
+
+CLIENT_HEARTBEAT_INTERVAL = 2
+CLIENT_HEARTBEAT_TIMEOUT = CLIENT_HEARTBEAT_INTERVAL * 5
 
 class ClientRunMessage(BaseModel):
     operation: str
@@ -16,14 +20,28 @@ class ClientRunMessage(BaseModel):
 
 client_router = APIRouter(prefix="/clients")
 
+async def run_callback(callback:Optional[Callable], *args, **kwargs):
+    if not callback:
+        return 
+    
+    result = callback(*args, **kwargs)
+
+    if isinstance(result, Awaitable):
+        await result
+
 class Client:
     js_plugin: ClassVar[str]
     router: ClassVar[APIRouter]
 
     def __init__(self, id:str):
         self.id = id
-        self.status = "connected"
+        self.status:Literal["connected", "disconnected"] = "connected"
         self.queued_requests: list[ClientRunMessage] = []
+        self.last_heartbeat = time.time()
+
+    def handle_heartbeat(self):
+        self.status = 'connected'
+        self.last_heartbeat = time.time()
 
     async def prepare_response(self, data:dict) -> list[dict]:
         message = ClientRunMessage.model_validate(data)
@@ -55,21 +73,32 @@ class Client:
 class ClientManager:
     def __init__(self):
         self.on_msg_callback:Callable[[str, ClientRunMessage], None] = None
+        self.on_disconnect_callback:Callable[[str], None] = None
         self.clients: dict[str, Client] = {}
+
+    async def track_heartbeats(self):
+        while True:
+            for id, client in self.clients.items():
+                if time.time() - client.last_heartbeat < CLIENT_HEARTBEAT_TIMEOUT:
+                    continue
+                
+                if client.status == 'connected':
+                    await run_callback(self.on_disconnect_callback, id)
+
+                client.status = 'disconnected'
+
+            await asyncio.sleep(CLIENT_HEARTBEAT_INTERVAL)
 
     def on_msg(self, callback:Callable[[str, ClientRunMessage], None]):
         self.on_msg_callback = callback
 
+    def on_disconnect(self, callback:Callable[[str], None]):
+        self.on_disconnect_callback = callback
+
     async def msg_call(self, id:str, msg:ClientRunMessage):
         print(f"ClientManager received message for client {id}: {msg}")
 
-        if not self.on_msg_callback:
-            return
-
-        res = self.on_msg_callback(id, msg)
-
-        if isinstance(res, Awaitable):
-            await res
+        await run_callback(self.on_msg_callback, id, msg)
 
     def add_client(self, client: Client):
         if client.id in self.clients:
@@ -87,6 +116,10 @@ class ClientManager:
         client = self.get_client(client_id)
         client.enqueue_message(message)
 
+    def handle_heartbeat(self, client_id:str):
+        client = self.get_client(client_id)
+        client.handle_heartbeat()
+
 client_manager = ClientManager()
 
 async def handle_message(client_id:str, message: ClientRunMessage) -> ClientRunMessage:
@@ -94,6 +127,7 @@ async def handle_message(client_id:str, message: ClientRunMessage) -> ClientRunM
         case "heartbeat":
             if message.data != "ping":
                 None
+            client_manager.handle_heartbeat(client_id)
             return ClientRunMessage(operation="heartbeat", data="pong", id=message.id)
         case _:
             await client_manager.msg_call(client_id, message)

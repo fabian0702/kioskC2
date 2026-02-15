@@ -13,9 +13,12 @@ from pydantic import BaseModel, ValidationError
 
 from secrets import token_hex
 
-class Message(BaseModel):
+
+class ClientMessage(BaseModel):
     operation: str
-    url: str
+    data: dict
+    id:str
+
 
 BUCKET_NAME = "bundler"
 
@@ -24,6 +27,8 @@ async def save_object(nc: NATS, name: str, data: str):
 
     if isinstance(data, str):
          data = data.encode()
+
+    print(f"Saving {name} into bucket {BUCKET_NAME}")
 
     try:
         object_store = await js.object_store(BUCKET_NAME)
@@ -38,6 +43,8 @@ async def handle_fetch_request(url: str, nc: NATS) -> str:
     page_data = await fetch_page(url)
 
     page_name = f"page-{token_hex(8)}"
+
+    print(f'Page Name: {page_name}')
 
     await save_object(nc, page_name, page_data)
 
@@ -62,23 +69,26 @@ async def handle_preview_request(nc:NATS, url: str) -> str:
 
 async def main():
     nc = await nats.connect("nats://nats:4222")
-    js = nc.jetstream()
-
-    await js.add_stream(name="bundler", subjects=["bundler.fetch"])
 
     sub = await nc.subscribe("bundler.fetch")
     async for msg in sub.messages:
         try:
-            message = Message.model_validate_json(msg.data)
+            message = ClientMessage.model_validate_json(msg.data)
         except ValidationError as e:
             print(f"Invalid message format: {e}")
             continue
+
+        if not 'url' in message.data:
+            print("no url in the request found")
+            continue
+
         match message.operation:
             case "bundle":
-                page_name = await handle_fetch_request(message.url, nc)
+                page_name = await handle_fetch_request(message.data.get('url'), nc)
+                print(f"Finished building page with name {page_name}")
                 await msg.respond(page_name.encode())
             case "preview":
-                screenshot_name = await handle_preview_request(nc, message.url)
+                screenshot_name = await handle_preview_request(nc, message.data.get('url'))
                 await msg.respond(screenshot_name.encode())
             case _:
                 print(f"Unknown operation: {message.operation}")

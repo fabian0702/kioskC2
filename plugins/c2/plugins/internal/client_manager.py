@@ -21,7 +21,7 @@ class Client:
         if not message.operation in self.loaded_methods:
             return PluginMessage(operation="error", data={"message": f"Unknown operation: {message.operation}"}, id=message.id)
         
-        method, plugin = self.loaded_methods[message.operation]
+        method, plugin, params = self.loaded_methods[message.operation]
 
         try:
             plugin_instance = await plugin.new(self.nc, self.client_id)
