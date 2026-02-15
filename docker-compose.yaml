@@ -47,5 +47,13 @@ services:
     volumes:
       - plugins:/plugins/
 
+  ui-backend:
+    build: ./ui/backend/
+    depends_on:
+      - nats
+    restart: unless-stopped
+    ports:
+      - 8000:8001
+
 volumes:
   plugins:
