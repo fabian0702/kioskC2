@@ -55,5 +55,13 @@ services:
     ports:
       - 8001:8001
 
+  ui-frontend:
+    build: ./ui/frontend/
+    depends_on:
+      - ui-backend
+    restart: unless-stopped
+    ports:
+      - 4200:80
+
 volumes:
   plugins:

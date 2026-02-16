@@ -1,0 +1,126 @@
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">KioskC2</div>
+      <div class="subtitle">Command & Control</div>
+    </div>
+    
+    <div class="sidebar-content">
+      <div class="section-title">Connected Clients</div>
+      <ul class="client-list">
+        <li 
+          *ngFor="let client of clients()" 
+          (click)="selectClient(client)"
+          [class.active]="selectedClient() === client"
+          class="client-item">
+          <span class="status-indicator"></span>
+          <span class="client-name">{{ client }}</span>
+        </li>
+        <li *ngIf="clients().length === 0" class="empty-state">
+          No clients connected
+        </li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="top-bar">
+      <h1>{{ title() }}</h1>
+      <div class="user-profile">Admin</div>
+    </header>
+    
+    <div class="content-container">
+      <div *ngIf="selectedClient(); else noSelection" class="dashboard-grid">
+        
+        <!-- Control Panel Card -->
+        <div class="card control-panel">
+          <div class="card-header">
+            <h2>Execute Command</h2>
+            <p class="card-subtitle">Select an action to perform on {{ selectedClient() }}</p>
+          </div>
+          
+          <div class="card-body">
+            <div class="form-group">
+              <label>Method</label>
+              <select 
+                [ngModel]="selectedMethod()" 
+                (ngModelChange)="selectMethod($event)"
+                class="form-select">
+                <option [ngValue]="null">Select a method...</option>
+                <option *ngFor="let m of methodKeys()" [ngValue]="m">{{ m }}</option>
+              </select>
+            </div>
+
+            <div *ngIf="selectedMethod()" class="method-params">
+              <div class="params-header">
+                <h3>Parameters</h3>
+              </div>
+              
+              <div class="params-grid">
+                <div *ngFor="let param of methods()[selectedMethod()!].parameters" class="form-group">
+                  <label>{{ param.name }} <span class="param-type">{{ param.type }}</span></label>
+                  
+                  <ng-container [ngSwitch]="param.type">
+                    <div *ngSwitchCase="'bool'" class="toggle-switch">
+                      <input type="checkbox" [id]="param.name" [(ngModel)]="methodArgs()[param.name]">
+                      <label [for]="param.name"></label>
+                    </div>
+                    
+                    <input *ngSwitchCase="'int'" type="number" 
+                           [(ngModel)]="methodArgs()[param.name]"
+                           class="form-input">
+
+                    <input *ngSwitchDefault type="text" 
+                           [(ngModel)]="methodArgs()[param.name]"
+                           class="form-input">
+                  </ng-container>
+                </div>
+              </div>
+              
+              <div class="actions">
+                <button (click)="runSelectedMethod()" class="btn btn-primary">
+                  Run Method
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Output Card -->
+        <div class="card terminal-card">
+          <div class="card-header">
+            <h2>Execution Log</h2>
+            <span class="badge">{{ allCommandResults().length }} events</span>
+          </div>
+          <div class="terminal-window">
+            <div *ngFor="let cmd of allCommandResults()" class="log-entry">
+              <div class="log-meta">
+                <span class="log-time">[{{ cmd.id.substring(0, 8) }}]</span>
+                <span class="status-badge" [ngClass]="cmd.status">{{ cmd.status }}</span>
+              </div>
+              <div *ngIf="cmd.status === 'success' || cmd.status === 'error'" class="log-content">
+                <pre>{{ cmd.result | json }}</pre>
+              </div>
+            </div>
+            <div *ngIf="allCommandResults().length === 0" class="empty-logs">
+              No commands executed yet.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <ng-template #noSelection>
+        <div class="empty-selection-state">
+          <div class="icon-placeholder">🖥️</div>
+          <h2>No Client Selected</h2>
+          <p>Please select a client from the sidebar to start managing it.</p>
+        </div>
+      </ng-template>
+
+      <router-outlet />
+    </div>
+  </main>
+</div>

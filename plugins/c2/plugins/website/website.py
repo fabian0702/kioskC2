@@ -11,7 +11,7 @@ class WebsitePlugin(BasePlugin):
             bundled_html = await self.methods.bundle_page(url)
             url = await self.methods.serve(bundled_html, extension='html')
 
-        return await self.methods.eval_js(f'''
+        await self.methods.eval_js(f'''
             (async () => {{
                 if (!window.load_website_plugin) {{
                     setTimeout(arguments.callee, 100);
@@ -20,3 +20,5 @@ class WebsitePlugin(BasePlugin):
                 load_website_plugin("{url}");                              
             }})()
         ''')
+
+        return 'website loaded properly'
