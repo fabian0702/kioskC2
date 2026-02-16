@@ -6,8 +6,6 @@ services:
       - "8222:8222"
       - "6222:6222"
     command: "-js -m 8222"
-    # volumes:
-    #   - ./nats-server.conf:/etc/nats/nats-server.conf
     restart: unless-stopped
 
   clients:
