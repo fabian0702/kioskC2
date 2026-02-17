@@ -1,4 +1,7 @@
 import asyncio
+
+from secrets import token_hex
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -9,7 +12,10 @@ from c2.clients.base import client_router, client_manager
 from c2.clients.nats_client import run_nats
 from c2.clients.page.builder import build_dist
 
+import os
 import asyncio
+
+EXTERNAL_URL = os.environ.get('EXTERNAL_URL', 'localhost')
 
 async def lifespan(app:FastAPI):
     await build_dist()
@@ -42,7 +48,7 @@ app.mount('/plugins/', plugins)
 
 @app.get("/")
 def root():
-    return RedirectResponse(url="http://test.localhost:8000/client")
+    return RedirectResponse(url=f"http://{token_hex(8)}.clients.{EXTERNAL_URL}/client")
 
 @app.get("/client")
 def client_page(request: Request):
