@@ -7,6 +7,8 @@ services:
       - "6222:6222"
     command: "-js -m 8222"
     restart: unless-stopped
+    networks:
+      - c2
 
   clients:
     build: ./clients
@@ -14,28 +16,35 @@ services:
       - nats
       - client-builder
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     volumes:
       - ./clients/c2/clients/page/:/code/c2/clients/page/
       - ./client-builder/src/plugins/:/plugins/
       - plugins:/plugins/
+    networks:
+      - c2
+    labels:
+      - traefik.http.services.api.loadbalancer.server.port=8000
+      - traefik.http.routers.api.rule=HostRegexp(`[0-9a-f]\.clients\..*`)
+      - traefik.enable=true
   
   client-builder:
     build: ./client-builder
     volumes:
       - ./client-builder/src/:/app/src/
       - ./clients/c2/clients/page/dist/:/app/dist/
-
     depends_on:
       - nats
     restart: unless-stopped
+    networks:
+      - c2
 
   website-bundler:
     build: ./website-bundler
     depends_on:
       - nats
     restart: unless-stopped
+    networks:
+      - c2
 
   plugins:
     build: ./plugins
@@ -44,22 +53,52 @@ services:
     restart: unless-stopped
     volumes:
       - plugins:/plugins/
+    networks:
+      - c2
 
   ui-backend:
     build: ./ui/backend/
     depends_on:
       - nats
     restart: unless-stopped
-    ports:
-      - 8001:8001
+    networks:
+      - c2
+    labels:
+      - traefik.http.services.api.loadbalancer.server.port=8000
+      - traefik.http.routers.api.rule=PathPrefix(`/api`)
+      - traefik.http.routers.api.middlewares=api-strip-api
+      - traefik.http.middlewares.api-strip-api.stripprefix.prefixes=/api/
+      - traefik.enable=true
 
   ui-frontend:
     build: ./ui/frontend/
     depends_on:
       - ui-backend
     restart: unless-stopped
+    networks:
+      - c2
+
+    labels:
+      - traefik.http.services.api.loadbalancer.server.port=80
+      - traefik.http.routers.api.rule=PathPrefix(`/`)
+      - traefik.enable=true
+
+  traefik:
+    image: traefik:3.5
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./traefik/traefik.yml:/traefik.yml
+      - ./traefik/dynamic.yml:/dynamic.yml
+    extra_hosts:
+      idp: 172.16.1.142
     ports:
-      - 80:80
+      - "80:80"
+    networks:
+      - c2
+    restart: unless-stopped
 
 volumes:
   plugins:
+
+networks:
+  c2:

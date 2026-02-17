@@ -1,0 +1,26 @@
+api:
+  dashboard: true
+  insecure: true
+
+accesslog:
+  addInternals: true
+
+entryPoints:
+  web:
+    address: :80
+    http:
+      middlewares:
+        - oidc-auth@file
+
+providers:
+  docker:
+    endpoint: unix:///var/run/docker.sock
+    exposedByDefault: false
+  file:
+    filename: /dynamic.yml
+    
+experimental:
+  plugins:
+    traefik-oidc-auth:
+      moduleName: github.com/sevensolutions/traefik-oidc-auth
+      version: v0.18.0
