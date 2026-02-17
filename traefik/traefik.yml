@@ -8,9 +8,9 @@ accesslog:
 entryPoints:
   web:
     address: :80
-    http:
-      middlewares:
-        - oidc-auth@file
+    # http:
+    #   middlewares:
+    #     - oidc-auth@file
 
 providers:
   docker:
@@ -19,8 +19,8 @@ providers:
   file:
     filename: /dynamic.yml
     
-experimental:
-  plugins:
-    traefik-oidc-auth:
-      moduleName: github.com/sevensolutions/traefik-oidc-auth
-      version: v0.18.0
+# experimental:
+#   plugins:
+#     traefik-oidc-auth:
+#       moduleName: github.com/sevensolutions/traefik-oidc-auth
+#       version: v0.18.0

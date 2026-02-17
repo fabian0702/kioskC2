@@ -23,8 +23,8 @@ services:
     networks:
       - c2
     labels:
-      - traefik.http.services.api.loadbalancer.server.port=8000
-      - traefik.http.routers.api.rule=HostRegexp(`[0-9a-f]\.clients\..*`)
+      - traefik.http.services.clients.loadbalancer.server.port=8000
+      - traefik.http.routers.clients.rule=HostRegexp(`[0-9a-f]\.clients\..*`) || HostRegexp(`clients\..*`)
       - traefik.enable=true
   
   client-builder:
@@ -65,9 +65,7 @@ services:
       - c2
     labels:
       - traefik.http.services.api.loadbalancer.server.port=8000
-      - traefik.http.routers.api.rule=PathPrefix(`/api`)
-      - traefik.http.routers.api.middlewares=api-strip-api
-      - traefik.http.middlewares.api-strip-api.stripprefix.prefixes=/api/
+      - traefik.http.routers.api.rule=PathPrefix(`/socket.io`)
       - traefik.enable=true
 
   ui-frontend:
@@ -79,12 +77,12 @@ services:
       - c2
 
     labels:
-      - traefik.http.services.api.loadbalancer.server.port=80
-      - traefik.http.routers.api.rule=PathPrefix(`/`)
+      - traefik.http.services.frontend.loadbalancer.server.port=80
+      - traefik.http.routers.frontend.rule=PathPrefix(`/`)
       - traefik.enable=true
 
   traefik:
-    image: traefik:3.5
+    image: traefik:3.6
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/traefik.yml

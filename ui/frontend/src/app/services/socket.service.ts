@@ -30,7 +30,7 @@ export class SocketService extends Socket {
   public commandResults = signal<Record<string, CommandResult>>({});
 
   constructor(appRef: ApplicationRef) {
-    super({ url: 'http://localhost:8001', options: {} }, appRef);
+    super({ url: window.location.origin, options: {} }, appRef);
     
     this.fromEvent('plugin.response').subscribe((data: any) => {
       console.log('Message received (raw):', data);

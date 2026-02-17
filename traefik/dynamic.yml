@@ -1,23 +1,24 @@
-http:
-  middlewares:
-    oidc-auth:
-      plugin:
-        traefik-oidc-auth:
-          Provider:
-            Url: S.idp.url
-            ClientId: S.idp.client.id
-            ClientSecret: S.idp.client.secret
-          LogLevel: DEBUG
-          AuthorizationHeader:
-            Name: Authorization
-          BypassAuthenticationRule: >
-            PathPrefix(`/client`)
-          Scopes:
-            - openid
-            - profile
-            - email
-          SessionCookie:
-            Secure: false
-          Headers:
-            - Name: X-Auth-Request-Preferred-Username
-              Value: "{{`{{ .claims.preferred_username }}`}}"
+# http:
+#   middlewares:
+#     oidc-auth:
+#       plugin:
+#         traefik-oidc-auth:
+#           Provider:
+#             Url: S.idp.url
+#             ClientId: S.idp.client.id
+#             ClientSecret: S.idp.client.secret
+#           LogLevel: DEBUG
+#           AuthorizationHeader:
+#             Name: Authorization
+#           BypassAuthenticationRule: >
+#             PathPrefix(`/client`)
+#           Scopes:
+#             - openid
+#             - profile
+#             - email
+#           SessionCookie:
+#             Secure: false
+#           Headers:
+#             - Name: X-Auth-Request-Preferred-Username
+#               Value: "{{`{{ .claims.preferred_username }}`}}"
+# 

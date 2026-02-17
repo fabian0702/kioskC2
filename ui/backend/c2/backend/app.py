@@ -37,14 +37,18 @@ async def plugin_respond(client_id: str, request_id: str):
     except Exception as e:
         print(f"Error in plugin_respond: {e}")
 
+async def request_clients():
+    clients = await state.client_kv.keys()
+    await sio.emit('clients.response', clients)
 
 @sio.on('clients.request')
 async def get_clients(sid: str):
     if not state.client_kv:
         return
         
-    clients = await state.client_kv.keys()
-    await sio.emit('clients.response', clients)
+    await request_clients()
+
+state.on_client_connect(request_clients)
 
 @sio.on('methods.request')
 async def get_methods(sid: str):
@@ -84,4 +88,4 @@ async def run_plugin(sid: str, plugin_args: dict):
 
 
 if __name__ == '__main__':
-    uvicorn.run(app=sio_app, port=8001, host='0.0.0.0')
+    uvicorn.run(app=sio_app, host='0.0.0.0')
