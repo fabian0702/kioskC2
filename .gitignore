@@ -4,3 +4,4 @@
 **/*.min.js
 **/*.min.js.map
 client-builder/src/plugins/
+.venv
