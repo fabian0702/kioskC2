@@ -14,29 +14,16 @@ services:
     build: ./clients
     depends_on:
       - nats
-      - client-builder
     restart: unless-stopped
     volumes:
-      - ./clients/c2/clients/page/:/code/c2/clients/page/
-      - ./client-builder/src/plugins/:/plugins/
-      - plugins:/plugins/
+      - static_plugins:/static/plugins/
     networks:
       - c2
     labels:
       - traefik.http.services.clients.loadbalancer.server.port=8000
       - traefik.http.routers.clients.rule=HostRegexp(`[0-9a-f]\.clients\..*`) || HostRegexp(`clients\..*`)
       - traefik.enable=true
-  
-  client-builder:
-    build: ./client-builder
-    volumes:
-      - ./client-builder/src/:/app/src/
-      - ./clients/c2/clients/page/dist/:/app/dist/
-    depends_on:
-      - nats
-    restart: unless-stopped
-    networks:
-      - c2
+
 
   website-bundler:
     build: ./website-bundler
@@ -52,7 +39,7 @@ services:
       - nats
     restart: unless-stopped
     volumes:
-      - plugins:/plugins/
+      - static_plugins:/static/
     networks:
       - c2
 
@@ -96,7 +83,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  plugins:
+  static_plugins:
 
 networks:
   c2:

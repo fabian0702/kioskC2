@@ -28,20 +28,21 @@ async def run_nats():
 
     clients_bucket = await get_or_create_bucket(js, 'clients')
 
-    async def send_message(id:str, msg:ClientRunMessage):
-        if msg.operation == 'connect':
-            print(f"Publishing connection message for client {id}")
-            await nc.publish('client.connect', id.encode())
-            await clients_bucket.put(id, b'connected')
-        else:
-            print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {msg.data}")
-            await nc.publish(f'client.response.{id}.{msg.id}', msg.model_dump_json().encode())
+    async def handle_message(id:str, msg:ClientRunMessage):
+        print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {msg.data}")
+        await nc.publish(f'client.response.{id}.{msg.id}', msg.model_dump_json().encode())
 
-    client_manager.on_msg(send_message)
+    client_manager.on_msg(handle_message)
+
+    async def handle_connect(id:str):
+        await nc.publish('client.connect', id.encode())
+        await clients_bucket.put(id, b'connected')
+
+    client_manager.on_connect(handle_connect)
 
     async def handle_disconnect(id:str):
         await nc.publish('client.disconnect', id.encode())
-        await clients_bucket.put(id, b'connected')
+        await clients_bucket.put(id, b'disconnected')
 
     client_manager.on_disconnect(handle_disconnect)
 

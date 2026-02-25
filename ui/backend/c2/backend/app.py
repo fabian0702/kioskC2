@@ -4,6 +4,7 @@ import json
 import socketio
 import uvicorn
 from nats.errors import TimeoutError as NATSTimeoutError
+from nats.js.errors import NoKeysError
 
 from c2.backend.classes import PluginMessage
 from c2.backend.state import AppState
@@ -38,7 +39,10 @@ async def plugin_respond(client_id: str, request_id: str):
         print(f"Error in plugin_respond: {e}")
 
 async def request_clients():
-    clients = await state.client_kv.keys()
+    try:
+        clients = await state.client_kv.keys()
+    except NoKeysError:
+        clients = []
     await sio.emit('clients.response', clients)
 
 @sio.on('clients.request')

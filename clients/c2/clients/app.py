@@ -4,13 +4,11 @@ from secrets import token_hex
 
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, HTMLResponse
 
 from c2.clients.plugins.plugins import *
-from c2.clients.base import client_router, client_manager
+from c2.clients.base import client_manager
 from c2.clients.nats_client import run_nats
-from c2.clients.page.builder import build_dist
 
 import os
 import asyncio
@@ -18,8 +16,6 @@ import asyncio
 EXTERNAL_URL = os.environ.get('EXTERNAL_URL', 'localhost')
 
 async def lifespan(app:FastAPI):
-    await build_dist()
-
     track_heartbeat_task = asyncio.create_task(client_manager.track_heartbeats())
 
     nats_task = asyncio.create_task(run_nats())
@@ -35,15 +31,10 @@ async def lifespan(app:FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(client_router)
+app.include_router(client_manager.router)
 
-templates = Jinja2Templates(directory="c2/clients/page")
-
-static = StaticFiles(directory='c2/clients/page/', follow_symlink=True)
+static = StaticFiles(directory='/static/')
 app.mount('/static/', static)
-
-plugins = StaticFiles(directory='/plugins/', follow_symlink=True)
-app.mount('/plugins/', plugins)
 
 
 @app.get("/")
@@ -51,5 +42,9 @@ def root():
     return RedirectResponse(url=f"http://{token_hex(8)}.clients.{EXTERNAL_URL}/client")
 
 @app.get("/client")
-def client_page(request: Request):
-    return templates.TemplateResponse("index.html.jinja", {"request": request})
+def client_page():
+    return HTMLResponse("""<html>
+        <head>
+            <script type="module" src="/static/bundle.min.js"></script>
+        </head>
+    </html>""")
