@@ -10,9 +10,14 @@ from c2.backend.classes import PluginMessage
 from c2.backend.state import AppState
 
 
+static_files = {
+    '/': '/frontend/index.html',
+    '/': '/frontend/',
+}
+
 state = AppState()
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-sio_app = socketio.ASGIApp(sio, on_startup=state.startup, on_shutdown=state.shutdown)
+sio_app = socketio.ASGIApp(sio, on_startup=state.startup, on_shutdown=state.shutdown, static_files=static_files)
 
 
 async def plugin_respond(client_id: str, request_id: str):

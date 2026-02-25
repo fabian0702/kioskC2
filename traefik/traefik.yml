@@ -8,9 +8,9 @@ accesslog:
 entryPoints:
   web:
     address: :80
-    http:
-      middlewares:
-        - oidc-auth@file
+    #http:
+    #  middlewares:
+    #    - oidc-auth@file
 
 providers:
   docker:

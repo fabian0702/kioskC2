@@ -63,7 +63,7 @@ function establish_communication() {
         }
 
         for (const msg of msgs) {
-            console.log("Received message:", msg);
+            // console.log("Received message:", msg);
 
             let operation = msg?.operation;
             let data = msg?.data;
@@ -101,7 +101,7 @@ function send_message(data) {
         console.error("Communication plugin not established");
         return;
     }
-    console.log("Sending message:", data);
+    // console.log("Sending message:", data);
     try {
         plugin_send_function(data);
     } catch (err) {

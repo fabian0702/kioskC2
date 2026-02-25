@@ -1,3 +1,15 @@
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY ./frontend/package*.json ./
+
+RUN npm ci
+
+COPY ./frontend/ .
+
+RUN npm run build -- --configuration production
+
+
 FROM python:3.13-slim
 
 WORKDIR /code
@@ -15,12 +27,14 @@ ENV PYTHONFAULTHANDLER=1 \
     # poetry:
     POETRY_NO_INTERACTION=1
 
-COPY ./pyproject.toml ./poetry.lock /code/
+COPY ./backend/pyproject.toml ./backend/poetry.lock /code/
 
 RUN pip install -U poetry==2.1.4 \
   && poetry config virtualenvs.create false \
   && poetry install
 
-COPY ./c2/ /code/c2/
+COPY --from=build /app/dist/kiosk-frontend/browser /frontend/
+
+COPY ./backend/c2/ /code/c2/
 
 CMD ["python", "c2/backend/app.py"]

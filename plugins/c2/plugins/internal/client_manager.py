@@ -29,8 +29,8 @@ class Client:
             return PluginMessage(client_id=message.client_id, operation="result", data=result, id=message.id)
         except asyncio.CancelledError:
             return PluginMessage(client_id=message.client_id, operation="reconnect", data={}, id=message.id)
-        # except Exception as e:
-        #     return PluginMessage(client_id=message.client_id, operation="error", data={"message": str(e)}, id=message.id)
+        except Exception as e:
+            return PluginMessage(client_id=message.client_id, operation="error", data={"message": str(e)}, id=message.id)
 
     async def handle_message(self, message: PluginMessage):
         """Handle an incoming message from the client."""

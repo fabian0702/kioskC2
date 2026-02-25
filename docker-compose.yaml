@@ -43,8 +43,8 @@ services:
     networks:
       - c2
 
-  ui-backend:
-    build: ./ui/backend/
+  ui:
+    build: ./ui/
     depends_on:
       - nats
     restart: unless-stopped
@@ -52,20 +52,7 @@ services:
       - c2
     labels:
       - traefik.http.services.api.loadbalancer.server.port=8000
-      - traefik.http.routers.api.rule=PathPrefix(`/socket.io`)
-      - traefik.enable=true
-
-  ui-frontend:
-    build: ./ui/frontend/
-    depends_on:
-      - ui-backend
-    restart: unless-stopped
-    networks:
-      - c2
-
-    labels:
-      - traefik.http.services.frontend.loadbalancer.server.port=80
-      - traefik.http.routers.frontend.rule=PathPrefix(`/`)
+      - traefik.http.routers.api.rule=PathPrefix(`/`)
       - traefik.enable=true
 
   traefik:

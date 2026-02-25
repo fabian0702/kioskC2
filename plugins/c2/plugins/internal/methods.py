@@ -51,15 +51,17 @@ class Methods:
             content = content.encode()
 
         hash = sha256(content).hexdigest()
-        path = f'/plugins/{hash}'
+        file_path = f'/static/{hash}'
+        serve_path = f"/static/plugins/{hash}"
 
         if extension:
-            path += '.' + extension
+            file_path += '.' + extension
+            serve_path += '.' + extension
 
-        with open(path, 'wb') as f:
+        with open(file_path, 'wb') as f:
             f.write(content)
 
-        return path
+        return serve_path
 
     async def _send_client_msg(self, msg:ClientMessage):
         await self.nc.publish(f"client.operations.{self.client_id}", msg.model_dump_json().encode())

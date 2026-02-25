@@ -7,7 +7,7 @@ function setup_heartbeat_monitor() {
     var last_heartbeat = null;
 
     register_message_callback("heartbeat", (data, id) => {
-        console.log("Received heartbeat:", data);
+        // console.log("Received heartbeat:", data);
         last_heartbeat = Date.now();
     });
 
