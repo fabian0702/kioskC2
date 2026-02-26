@@ -1,10 +1,10 @@
 services:
   nats:
     image: nats
-    ports:
-      - "4222:4222"
-      - "8222:8222"
-      - "6222:6222"
+    # ports:
+    #   - "4222:4222"
+    #   - "8222:8222"
+    #   - "6222:6222"
     command: "-js -m 8222"
     restart: unless-stopped
     networks:
@@ -39,6 +39,7 @@ services:
       - nats
     restart: unless-stopped
     volumes:
+      - ./plugins/c2/plugins/:/code/c2/plugins/   # Enable hot-reloading of plugins
       - static_plugins:/static/
     networks:
       - c2
@@ -61,8 +62,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/traefik.yml
       - ./traefik/dynamic.yml:/dynamic.yml
-    extra_hosts:
-      idp: 172.16.1.142
     ports:
       - "80:80"
     networks:

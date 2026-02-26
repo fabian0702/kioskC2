@@ -38,7 +38,6 @@ async def request_clients():
     except NoKeysError:
         clients = {}
 
-    print(clients)
     await sio.emit('clients.response', clients)
 
 @sio.on('results.request')
@@ -71,6 +70,8 @@ state.on_client_disconnect(request_clients)
 async def request_methods():
     if not state.method_kv:
         return
+    
+    print("Requesting methods...")
 
     method_names = await state.method_kv.keys()
     methods = {}
@@ -96,6 +97,8 @@ async def run_plugin(sid: str, plugin_args: dict):
 
     try:
         message = PluginMessage.model_validate(plugin_args)
+
+        print(f"Received request to run plugin: {message.operation} for client {message.client_id} with args {message.args} and kwargs {message.kwargs}")
 
         topic = f"plugin.run.{message.client_id}"
         await state.js.publish(topic, message.model_dump_json().encode())

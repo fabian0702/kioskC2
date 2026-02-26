@@ -1,12 +1,17 @@
 import os
+import asyncio
 import importlib
+import watchfiles
 import inspect
 
 from typing import Callable, Literal, Union, Optional, Any
 
 from pydantic import BaseModel
 
+from nats import NATS
+
 from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.utils import get_or_create_kv
 
 
 
@@ -51,11 +56,23 @@ Method = tuple[Callable, type[BasePlugin], ParameterList]
 MethodsDict = dict[str, Method]
 
 class Loader:
-    def __init__(self, plugin_directory:str=PLUGIN_DIRECTORY):
+    def __init__(self, nc:NATS, plugin_directory:str=PLUGIN_DIRECTORY):
+        self.nc = nc
         self.plugin_directory = plugin_directory
-
+        
         self.load_plugins()
         self.load_methods()
+
+        self.hotreload_task = asyncio.create_task(self._hotreload())
+
+    async def _hotreload(self):
+        await self._publish()
+
+        async for changes in watchfiles.awatch(self.plugin_directory):
+            print(f"Detected changes in plugin directory: {changes}")
+            self.load_plugins()
+            self.load_methods()
+            await self._publish()
 
     def load_plugin(self, module_path:str) -> type[BasePlugin] | None:
         print(f"Loading plugin module: {module_path}")
@@ -95,15 +112,19 @@ class Loader:
         return self.methods
 
     def get_args(self, method:Callable) -> ParameterList:
-
-        print(method)
-
         sig = inspect.signature(method)
-
-        print(sig.parameters)
 
         parameter_models = [ParameterModel.new(param) for param in sig.parameters.values() if not param.name == 'self']
 
-        print(sig.parameters.values())
-
         return ParameterList(parameters=[param for param in parameter_models if param is not None])
+
+    async def _publish(self):
+        js = self.nc.jetstream()
+
+        methods = await get_or_create_kv(js, "methods")
+        for key in await methods.keys():
+            await methods.purge(key)
+        for name, (_, _, params) in self.methods.items():
+            await methods.put(name, params.model_dump_json().encode())
+
+        await self.nc.publish('plugins.loaded')

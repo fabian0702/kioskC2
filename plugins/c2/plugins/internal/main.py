@@ -3,7 +3,6 @@ import asyncio
 
 from c2.plugins.internal.loader import Loader
 from c2.plugins.internal.client_manager import ClientManager
-from c2.plugins.internal.utils import get_or_create_kv
 
 
 async def main():
@@ -11,13 +10,7 @@ async def main():
 
     js = nc.jetstream()
 
-    loader = Loader()
-
-    methods = await get_or_create_kv(js, "methods")
-    for name, (_, _, params) in loader.methods.items():
-        await methods.put(name, params.model_dump_json().encode())
-
-    await nc.publish('plugins.loaded', b'')
+    loader = Loader(nc)
 
     await js.add_stream(name="plugins", subjects=["plugin.run.*", "plugin.response.>"])
 

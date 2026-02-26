@@ -10,6 +10,7 @@ package-mode = false
 python = "^3.12"
 nats-py = "^2.13.1"
 pydantic = "^2.12.5"
+watchfiles = "^1.1.1"
 
 
 [build-system]

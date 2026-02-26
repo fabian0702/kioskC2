@@ -67,6 +67,8 @@ class Client:
             await self.result_bucket.put(message.id, pending_result.model_dump_json().encode())
             await self.nc.publish(f"plugin.response.{self.client_id}")
 
+            print(f"Running method {message.operation} for client {message.client_id} with args {message.args} and kwargs {message.kwargs}")
+
             result = await self.run_method(message)
 
             await self.result_bucket.put(message.id, result.model_dump_json().encode())
