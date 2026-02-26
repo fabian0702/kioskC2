@@ -94,10 +94,33 @@
     }
     
     .client-name {
+      flex: 1;
+      min-width: 0;
       font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .delete-client-btn {
+      border: 1px solid transparent;
+      background-color: transparent;
+      border-radius: 8px;
+      color: var(--error-color);
+      font-size: 1rem;
+      font-weight: 700;
+      width: 1.5rem;
+      height: 1.5rem;
+      padding: 0;
+      line-height: 1;
+      margin-left: 0.5rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        border-color: var(--error-color);
+      }
     }
   }
   
@@ -107,6 +130,23 @@
     color: #6b7280;
     font-size: 0.875rem;
     font-style: italic;
+  }
+}
+
+.delete-feedback {
+  font-size: 0.75rem;
+  margin: 0 0.5rem 0.75rem;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+
+  &.success {
+    color: var(--success-color);
+  }
+
+  &.error {
+    color: var(--error-color);
   }
 }
 
@@ -330,6 +370,53 @@
       transform: translateY(1px);
     }
   }
+
+  &.btn-secondary {
+    background-color: var(--surface-color);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
+  }
+
+  &.btn-danger {
+    background-color: var(--error-color);
+    color: var(--surface-color);
+  }
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: color-mix(in srgb, var(--text-main) 60%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 20;
+}
+
+.confirm-modal {
+  width: min(420px, 100%);
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 1.25rem;
+
+  h3 {
+    color: var(--text-main);
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: var(--text-secondary);
+    margin: 0 0 1rem;
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
 }
 
 /* Terminal Output */

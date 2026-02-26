@@ -115,6 +115,10 @@ export class SocketService extends Socket {
     this.emit('results.request', clientId);
   }
 
+  removeClient(clientId: string) {
+    this.emit('client.remove', clientId);
+  }
+
   runMethod(targetClient: string, operation: string, kwargs: any, callback?: (id: string) => void) {
     const payload = {
       client_id: targetClient,

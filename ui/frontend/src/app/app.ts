@@ -47,6 +47,9 @@ export class App implements OnInit {
 
   selectedClient = signal<string | null>(null);
   selectedMethod = signal<string | null>(null);
+  showDeleteConfirm = signal(false);
+  pendingDeleteClientId = signal<string | null>(null);
+  deleteStatus = signal<{ type: 'success' | 'error'; message: string } | null>(null);
   
   // Stores current form values for method parameters
   methodArgs = signal<any>({});
@@ -96,6 +99,49 @@ export class App implements OnInit {
       this.socketService.runMethod(client, method, args, (id: string) => {
         this.lastCommandId.set(id);
       });
+    }
+  }
+
+  openDeleteConfirm(clientId: string, event: Event) {
+    event.stopPropagation();
+    this.pendingDeleteClientId.set(clientId);
+    this.showDeleteConfirm.set(true);
+  }
+
+  cancelDelete() {
+    this.showDeleteConfirm.set(false);
+    this.pendingDeleteClientId.set(null);
+  }
+
+  confirmDelete() {
+    const clientId = this.pendingDeleteClientId();
+    if (!clientId) {
+      this.cancelDelete();
+      return;
+    }
+
+    try {
+      this.socketService.removeClient(clientId);
+
+      if (this.selectedClient() === clientId) {
+        this.selectedClient.set(null);
+        this.selectedMethod.set(null);
+        this.methodArgs.set({});
+        this.socketService.setActiveClient(null);
+      }
+
+      this.deleteStatus.set({
+        type: 'success',
+        message: `Delete request sent for ${clientId}`
+      });
+    } catch (error) {
+      console.error('Error removing client:', error);
+      this.deleteStatus.set({
+        type: 'error',
+        message: `Failed to delete ${clientId}`
+      });
+    } finally {
+      this.cancelDelete();
     }
   }
 }

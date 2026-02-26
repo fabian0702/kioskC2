@@ -112,6 +112,13 @@ class AppState:
             await self.nc.drain()
             await self.nc.close()
             print("Shutdown complete")
+
+    async def remove_client(self, client_id: str):
+        if not self.client_kv:
+            return
+        
+        await self.client_kv.purge(client_id)
+        await self.nc.publish('client.disconnect')
     
     async def get_or_create_kv(self, bucket_name: str) -> KeyValue:
         """Internal helper to fetch or create a KV bucket."""

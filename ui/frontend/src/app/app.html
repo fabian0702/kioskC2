@@ -8,6 +8,9 @@
     
     <div class="sidebar-content">
       <div class="section-title">Connected Clients</div>
+      <div *ngIf="deleteStatus() as status" class="delete-feedback" [class.error]="status.type === 'error'" [class.success]="status.type === 'success'">
+        {{ status.message }}
+      </div>
       <ul class="client-list">
         <li 
           *ngFor="let client of clients()" 
@@ -16,6 +19,14 @@
           class="client-item">
           <span class="status-indicator" [class.disconnected]="!client.connected"></span>
           <span class="client-name">{{ client.id }}</span>
+          <button
+            type="button"
+            class="delete-client-btn"
+            (click)="openDeleteConfirm(client.id, $event)"
+            title="Delete client {{ client.id }}"
+            aria-label="Delete client {{ client.id }}">
+            <span aria-hidden="true">&times;</span>
+          </button>
         </li>
         <li *ngIf="clients().length === 0" class="empty-state">
           No clients connected
@@ -125,4 +136,15 @@
       <router-outlet />
     </div>
   </main>
+</div>
+
+<div *ngIf="showDeleteConfirm()" class="modal-backdrop" (click)="cancelDelete()">
+  <div class="confirm-modal" (click)="$event.stopPropagation()">
+    <h3>Delete Client</h3>
+    <p>Are you sure you want to delete {{ pendingDeleteClientId() }}?</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-secondary" (click)="cancelDelete()">Cancel</button>
+      <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete</button>
+    </div>
+  </div>
 </div>

@@ -88,7 +88,10 @@ state.on_plugin_loaded(request_methods)
 @sio.on('methods.request')
 async def get_methods(sid: str):
     await request_methods()
-    
+
+@sio.on('client.remove')
+async def remove_client(sid: str, client_id: str):
+    await state.remove_client(client_id)
 
 @sio.on('plugin.run')
 async def run_plugin(sid: str, plugin_args: dict):
