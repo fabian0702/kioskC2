@@ -1,6 +1,6 @@
 import { Injectable, ApplicationRef, signal } from '@angular/core';
 import { Socket } from 'ngx-socket-io';
-import { map } from 'rxjs/operators';
+import { Subscription } from 'rxjs';
 
 export interface MethodParameter {
   name: string;
@@ -15,6 +15,7 @@ export interface MethodDefinition {
 export interface CommandResult {
   id: string;
   result: any;
+  operation: string;
   status: 'pending' | 'success' | 'error';
   timestamp: number;
 }
@@ -28,49 +29,12 @@ export class SocketService extends Socket {
   public clients = signal<string[]>([]);
   public methods = signal<Record<string, MethodDefinition>>({});
   public commandResults = signal<Record<string, CommandResult>>({});
+  private activeClientId: string | null = null;
+  private activeClientSubscriptions: Subscription[] = [];
 
   constructor(appRef: ApplicationRef) {
     super({ url: window.location.origin, options: {} }, appRef);
     
-    this.fromEvent('plugin.response').subscribe((data: any) => {
-      console.log('Message received (raw):', data);
-      
-      let parsedData = data;
-      if (typeof data === 'string') {
-        try {
-            parsedData = JSON.parse(data);
-        } catch (e) {
-            console.error('Failed to parse message:', data);
-            return;
-        }
-      }
-
-      this.messages.update(msgs => [...msgs, parsedData.msg || JSON.stringify(parsedData)]);
-
-      // Handle command result if ID is present
-      if (parsedData.id) {
-        console.log('Updating command result for ID:', parsedData.id); 
-        this.commandResults.update(results => {
-          const newResults = {
-            ...results,
-            [parsedData.id]: {
-              ...(results[parsedData.id] || {}),
-              id: parsedData.id,
-              result: parsedData.data || parsedData.result || parsedData.msg,
-              status: 'success',
-              // careful not to overwrite timestamp if we want to keep order, 
-              // or overwrite if we want to bump to top. Current sort is desc timestamp.
-              timestamp: results[parsedData.id]?.timestamp || Date.now() 
-            }
-          };
-          console.log('New command results state:', newResults);
-          return newResults;
-        });
-      } else {
-         console.warn('Received plugin.response without ID:', parsedData);
-      }
-    });
-
     this.fromEvent('methods.response').subscribe((data: any) => {
       console.log('Methods received:', data);
       this.methods.set(data);
@@ -93,6 +57,60 @@ export class SocketService extends Socket {
     this.emit('methods.request');
   }
 
+  setActiveClient(clientId: string | null) {
+    if (this.activeClientId === clientId) {
+      return;
+    }
+
+    this.activeClientSubscriptions.forEach(subscription => subscription.unsubscribe());
+    this.activeClientSubscriptions = [];
+    this.activeClientId = clientId;
+
+    if (!clientId) {
+      this.commandResults.set({});
+      return;
+    }
+
+    const resultsEvent = `results.response.${clientId}`;
+    const pluginEvent = `plugin.response.${clientId}`;
+
+    this.activeClientSubscriptions.push(
+      this.fromEvent(resultsEvent).subscribe((data: any) => {
+        const parsedResults = this.parseResultsPayload(data);
+        const mappedResults: Record<string, CommandResult> = {};
+
+        parsedResults.forEach((result: any, index: number) => {
+          const id = result?.id;
+          if (!id) {
+            return;
+          }
+
+          mappedResults[id] = {
+            id,
+            result: result.data,
+            operation: result.operation || this.commandResults()[id]?.operation || 'unknown',
+            status: this.mapResultStatus(result.state),
+            timestamp: this.commandResults()[id]?.timestamp || Date.now() + index
+          };
+        });
+
+        this.commandResults.set(mappedResults);
+      })
+    );
+
+    this.activeClientSubscriptions.push(
+      this.fromEvent(pluginEvent).subscribe(() => {
+        this.requestResults(clientId);
+      })
+    );
+
+    this.requestResults(clientId);
+  }
+
+  requestResults(clientId: string) {
+    this.emit('results.request', clientId);
+  }
+
   runMethod(targetClient: string, operation: string, kwargs: any, callback?: (id: string) => void) {
     const payload = {
       client_id: targetClient,
@@ -107,6 +125,7 @@ export class SocketService extends Socket {
         [id]: {
           id: id,
           result: null,
+          operation,
           status: 'pending',
           timestamp: Date.now()
         }
@@ -123,5 +142,34 @@ export class SocketService extends Socket {
       kwargs: { url: 'https://mnta.in/', bundle: true }
     };
     this.emit('plugin.run', payload, (id: string) => { console.log(`ID: ${id}`) })
+  }
+
+  private parseResultsPayload(data: any): any[] {
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    if (typeof data === 'string') {
+      try {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    return [];
+  }
+
+  private mapResultStatus(state: string): 'pending' | 'success' | 'error' {
+    if (state === 'error') {
+      return 'error';
+    }
+
+    if (state === 'pending') {
+      return 'pending';
+    }
+
+    return 'success';
   }
 }

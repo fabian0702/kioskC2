@@ -28,7 +28,7 @@
   <main class="main-content">
     <header class="top-bar">
       <h1>{{ title() }}</h1>
-      <div class="user-profile">Admin</div>
+      <!-- <div class="user-profile">Admin</div> -->
     </header>
     
     <div class="content-container">
@@ -97,6 +97,7 @@
           <div class="terminal-window">
             <div *ngFor="let cmd of allCommandResults()" class="log-entry">
               <div class="log-meta">
+                <span class="log-op">{{ cmd.operation || 'unknown' }}</span>
                 <span class="log-time">[{{ cmd.id.substring(0, 8) }}]</span>
                 <span class="status-badge" [ngClass]="cmd.status">{{ cmd.status }}</span>
               </div>
@@ -117,7 +118,7 @@
           <div class="icon-placeholder">🖥️</div>
           <h2>No Client Selected</h2>
           <p>Please select a client from the sidebar to start managing it.</p>
-          <p>You can add a client by heading to http://client.yourhostname/</p>
+          <p>You can add a client by heading to <a [href]="clientJoinUrl">{{ clientJoinUrl }}</a></p>
         </div>
       </ng-template>
 

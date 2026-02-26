@@ -25,23 +25,32 @@ class AppState:
         self.client_kv: Optional[KeyValue] = None
         self._on_client_connect_cb: Optional[Callable] = None
         self._on_plugin_loaded_cb: Optional[Callable] = None
+        self._on_plugin_response_cb: Optional[Callable] = None
         self._client_connect_task: asyncio.Task = None
         self._plugin_loaded_task: asyncio.Task = None
+        self._plugin_response_task: asyncio.Task = None
 
     async def startup(self):
         print(f"Connecting to NATS at {NATS_URL}...")
         self.nc = await nats.connect(NATS_URL)
         self.js = self.nc.jetstream()
         
-        self.method_kv = await self._get_or_create_kv('methods')
-        self.client_kv = await self._get_or_create_kv('clients')
+        self.method_kv = await self.get_or_create_kv('methods')
+        self.client_kv = await self.get_or_create_kv('clients')
         print("Startup complete")
 
         self._client_connect_task = asyncio.create_task(self._client_connect_handler())
         self._plugin_loaded_task = asyncio.create_task(self._plugin_loaded_handler())
+        self._plugin_response_task = asyncio.create_task(self._plugin_result_handler())
 
     def on_client_connect(self, callback:Callable):
         self._on_client_connect_cb = callback
+
+    def on_plugin_loaded(self, callback:Callable):
+        self._on_plugin_loaded_cb = callback
+
+    def on_plugin_response(self, callback:Callable):
+        self._on_plugin_response_cb = callback
 
     async def _client_connect_handler(self):
         try:
@@ -54,26 +63,39 @@ class AppState:
         except asyncio.CancelledError:
             sub.unsubscribe()
 
+    async def _plugin_result_handler(self):
+        try:
+            sub = await self.nc.subscribe('plugin.response.*')
+            async for msg in sub.messages:
+                print(f"Received plugin response: {msg.subject} - {msg.data.decode()}")
+                *_, client_id = msg.subject.split('.')
+                res = self._on_plugin_response_cb(client_id)
+                if isinstance(res, Awaitable):
+                    await res
+        except asyncio.CancelledError:
+            sub.unsubscribe()
+
     async def _plugin_loaded_handler(self):
         try:
             sub = await self.nc.subscribe('plugins.loaded')
             async for _ in sub.messages:
-                res = self._on_client_connect_cb()
+                res = self._on_plugin_loaded_cb()
                 if isinstance(res, Awaitable):
                     await res
         except asyncio.CancelledError:
             sub.unsubscribe()
 
     async def shutdown(self):
+        self._client_connect_task.cancel()
+        self._plugin_loaded_task.cancel()
+        self._plugin_response_task.cancel()
+
         if self.nc:
             await self.nc.drain()
             await self.nc.close()
             print("Shutdown complete")
-
-        self._client_connect_task.cancel()
-        self._plugin_loaded_task.cancel()
     
-    async def _get_or_create_kv(self, bucket_name: str) -> KeyValue:
+    async def get_or_create_kv(self, bucket_name: str) -> KeyValue:
         """Internal helper to fetch or create a KV bucket."""
         if not self.js:
             raise RuntimeError("JetStream context not initialized")

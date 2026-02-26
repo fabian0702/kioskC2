@@ -14,6 +14,7 @@ import { FormsModule } from '@angular/forms';
 export class App implements OnInit {
   protected readonly title = signal('kiosk-frontend');
   protected socketService = inject(SocketService);
+  clientJoinUrl = `${window.location.protocol}//clients.${window.location.host}/`;
   
   messages = this.socketService.messages;
   clients = this.socketService.clients;
@@ -56,6 +57,7 @@ export class App implements OnInit {
 
   selectClient(client: string) {
     this.selectedClient.set(client);
+    this.socketService.setActiveClient(client);
   }
 
   selectMethod(methodName: string) {

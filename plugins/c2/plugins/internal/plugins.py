@@ -34,6 +34,6 @@ class BasePlugin:
             js_path = os.path.join(os.path.dirname(script_path), self.js_file)
             if os.path.exists(js_path):
                 shutil.copy(js_path, f"/static/{self.js_file}")
-                await self.methods.load_plugin(f"/static/plugins/{self.js_file}")
+                await self.methods.load_js(f"/static/plugins/{self.js_file}")
 
         return self

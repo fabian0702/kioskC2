@@ -1,16 +1,20 @@
 import asyncio
 
 from nats import NATS
+from nats.js.kv import KeyValue
 
 from c2.plugins.internal.classes import PluginMessage
 from c2.plugins.internal.loader import Loader, MethodsDict
+from c2.plugins.internal.utils import get_or_create_kv
 
 
 class Client:
-    def __init__(self, nc:NATS, methods: MethodsDict, client_id:str):
+    def __init__(self, nc:NATS, methods: MethodsDict,  result_bucket: KeyValue, client_id:str):
         self.nc = nc
+        self.js = nc.jetstream()
         self.client_id = client_id
         self.loaded_methods: MethodsDict = methods
+        self.result_bucket = result_bucket
 
         self.tasks:list[asyncio.Task] = []
 
@@ -19,24 +23,54 @@ class Client:
     async def run_method(self, message: PluginMessage):
         """Handle an incoming message from the client."""
         if not message.operation in self.loaded_methods:
-            return PluginMessage(operation="error", data={"message": f"Unknown operation: {message.operation}"}, id=message.id)
+            return PluginMessage(
+                client_id=message.client_id,
+                operation=message.operation,
+                state="error",
+                data=f"Unknown operation: {message.operation}",
+                id=message.id
+            )
         
         method, plugin, params = self.loaded_methods[message.operation]
 
         try:
             plugin_instance = await plugin.new(self.nc, self.client_id)
             result = await method(plugin_instance, *message.args, **message.kwargs)
-            return PluginMessage(client_id=message.client_id, operation="result", data=result, id=message.id)
+            return PluginMessage(
+                client_id=message.client_id,
+                operation=message.operation,
+                state="complete",
+                data=result,
+                id=message.id
+            )
         except asyncio.CancelledError:
-            return PluginMessage(client_id=message.client_id, operation="reconnect", data={}, id=message.id)
+            return PluginMessage(
+                client_id=message.client_id,
+                operation=message.operation,
+                state="error",
+                data={},
+                id=message.id
+            )
         except Exception as e:
-            return PluginMessage(client_id=message.client_id, operation="error", data={"message": str(e)}, id=message.id)
+            return PluginMessage(
+                client_id=message.client_id,
+                operation=message.operation,
+                state="error",
+                data=str(e),
+                id=message.id
+            )
 
     async def handle_message(self, message: PluginMessage):
         """Handle an incoming message from the client."""
         async def task_wrapper():
+            pending_result = PluginMessage(client_id=message.client_id, operation=message.operation, state="pending", id=message.id)
+            await self.result_bucket.put(message.id, pending_result.model_dump_json().encode())
+            await self.nc.publish(f"plugin.response.{self.client_id}")
+
             result = await self.run_method(message)
-            await self.nc.publish(f"plugin.response.{self.client_id}.{message.id}", result.model_dump_json().encode())
+
+            await self.result_bucket.put(message.id, result.model_dump_json().encode())
+            await self.nc.publish(f"plugin.response.{self.client_id}")
 
         handle_message_task = asyncio.create_task(task_wrapper())
         self.tasks.append(handle_message_task)
@@ -90,7 +124,8 @@ class ClientManager:
             print(f"Client {client_id} already exists, tearing down existing client before reconnecting")
             await self.teardown_client(client_id)
 
-        client = Client(self.nc, self.loader.methods, client_id)
+        result_bucket = await get_or_create_kv(self.nc.jetstream(), f"results_{client_id}")
+        client = Client(self.nc, self.loader.methods, result_bucket, client_id)
 
         self.clients[client_id] = client
 

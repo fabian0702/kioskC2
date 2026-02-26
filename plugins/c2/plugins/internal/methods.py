@@ -82,12 +82,13 @@ class Methods:
 
         response = await self._wait_for_response(msg.id)
         
-        if response.get("error"):
-            raise JSExecutionError(response["error"])
+        if response.get("err"):
+            print(f"Error executing JS code: {response['err']}")
+            raise JSExecutionError(response["err"])
         
         return response.get("result")
 
-    async def load_plugin(self, url: str):
+    async def load_js(self, url: str):
         """
         Loads a javascript file from the given URL.
         

@@ -1,22 +1,10 @@
 import nats
-import json
 import asyncio
-
-from nats.js import JetStreamContext
-from nats.js.api import KeyValueConfig
-from nats.js.errors import NotFoundError
 
 from c2.plugins.internal.loader import Loader
 from c2.plugins.internal.client_manager import ClientManager
+from c2.plugins.internal.utils import get_or_create_kv
 
-
-async def get_or_create_kv(js:JetStreamContext, bucket_name: str):
-    try:
-        return await js.key_value(bucket_name)
-    except NotFoundError:
-        print(f"Bucket '{bucket_name}' not found. Creating...")
-        config = KeyValueConfig(bucket=bucket_name, history=5, ttl=None)
-        return await js.create_key_value(config)
 
 async def main():
     nc = await nats.connect("nats://nats:4222")

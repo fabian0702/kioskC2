@@ -20,28 +20,15 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 sio_app = socketio.ASGIApp(sio, on_startup=state.startup, on_shutdown=state.shutdown, static_files=static_files)
 
 
-async def plugin_respond(client_id: str, request_id: str):
+async def plugin_response(client_id: str):
     """
     Background task: Subscribes to a specific NATS subject, 
     waits for a single response, and emits it via Socket.IO.
     """
     if not state.nc:
         return
-
-    subject = f"plugin.response.{client_id}.{request_id}"
     
-    try:
-        sub = await state.nc.subscribe(subject, max_msgs=1)
-        msg = await sub.next_msg(timeout=30)
-        
-        data = msg.data.decode()
-        await sio.emit('plugin.response', data)
-
-    except NATSTimeoutError:
-        error_msg = {'id': request_id, 'error': 'Plugin response timed out'}
-        await sio.emit('plugin.error', error_msg)
-    except Exception as e:
-        print(f"Error in plugin_respond: {e}")
+    await sio.emit(f'plugin.response.{client_id}')
 
 async def request_clients():
     try:
@@ -49,6 +36,22 @@ async def request_clients():
     except NoKeysError:
         clients = []
     await sio.emit('clients.response', clients)
+
+@sio.on('results.request')
+async def request_results(sid:str, client_id:str):
+    if not state.js:
+        return
+
+    try:
+        result_bucket = await state.get_or_create_kv(f"results_{client_id}")
+        results = []
+        for key in await result_bucket.keys():
+            entry = await result_bucket.get(key)
+            if entry.value:
+                results.append(json.loads(entry.value))
+        await sio.emit(f'results.response.{client_id}', json.dumps(results))
+    except Exception as e:
+        print(f"Error requesting results for client {client_id}: {e}")
 
 @sio.on('clients.request')
 async def get_clients(sid: str):
@@ -58,9 +61,9 @@ async def get_clients(sid: str):
     await request_clients()
 
 state.on_client_connect(request_clients)
+state.on_plugin_response(plugin_response)
 
-@sio.on('methods.request')
-async def get_methods(sid: str):
+async def request_methods():
     if not state.method_kv:
         return
 
@@ -74,6 +77,13 @@ async def get_methods(sid: str):
 
     await sio.emit('methods.response', methods)
 
+state.on_plugin_loaded(request_methods)
+
+@sio.on('methods.request')
+async def get_methods(sid: str):
+    await request_methods()
+    
+
 @sio.on('plugin.run')
 async def run_plugin(sid: str, plugin_args: dict):
     if not state.js:
@@ -84,8 +94,6 @@ async def run_plugin(sid: str, plugin_args: dict):
 
         topic = f"plugin.run.{message.client_id}"
         await state.js.publish(topic, message.model_dump_json().encode())
-
-        asyncio.create_task(plugin_respond(message.client_id, message.id))
 
         return message.id
 
