@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from c2.clients.base import Client
 from fastapi import WebSocket
+from starlette.websockets import WebSocketDisconnect
 
 class WSClient(Client):
     router = APIRouter(prefix="/ws")
@@ -14,7 +15,10 @@ class WSClient(Client):
 
         print(f'got connection from client {client.id}')
 
-        while True:
-            data = await websocket.receive_json()
-            response = await client.prepare_response(data)
-            await websocket.send_json(response)
+        try:
+            while True:
+                data = await websocket.receive_json()
+                response = await client.prepare_response(data)
+                await websocket.send_json(response)
+        except WebSocketDisconnect:
+            print(f'client {client.id} disconnected')
