@@ -87,6 +87,10 @@
       border-radius: 50%;
       background-color: #10b981; /* Green for online */
       margin-right: 12px;
+
+      &.disconnected {
+        background-color: #ef4444;
+      }
     }
     
     .client-name {

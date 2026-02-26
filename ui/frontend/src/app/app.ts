@@ -1,6 +1,6 @@
 import { Component, signal, inject, OnInit, computed, effect } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SocketService, MethodDefinition, MethodParameter } from './services/socket.service';
+import { SocketService, CommandResult, MethodParameter } from './services/socket.service';
 import { CommonModule, NgFor, NgIf, NgSwitch, NgSwitchCase, NgSwitchDefault, JsonPipe } from '@angular/common'; // added JsonPipe
 import { FormsModule } from '@angular/forms';
 
@@ -39,7 +39,8 @@ export class App implements OnInit {
   });
 
   allCommandResults = computed(() => {
-    const results = Object.values(this.commandResults()).sort((a,b) => b.timestamp - a.timestamp);
+    const results = Object.values(this.commandResults()) as CommandResult[];
+    results.sort((a, b) => b.timestamp - a.timestamp);
     console.log('Recomputed allCommandResults:', results);
     return results;
   });
@@ -71,7 +72,7 @@ export class App implements OnInit {
     const methodDef = this.methods()[methodName];
     const initialArgs: any = {};
     if (methodDef && methodDef.parameters) {
-      methodDef.parameters.forEach(param => {
+      methodDef.parameters.forEach((param: MethodParameter) => {
         // Use default if available, else sensible type default
         if (param.default !== null && param.default !== undefined) {
            initialArgs[param.name] = param.default;

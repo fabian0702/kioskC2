@@ -24,9 +24,11 @@ class AppState:
         self.method_kv: Optional[KeyValue] = None
         self.client_kv: Optional[KeyValue] = None
         self._on_client_connect_cb: Optional[Callable] = None
+        self._on_client_disconnect_cb: Optional[Callable] = None
         self._on_plugin_loaded_cb: Optional[Callable] = None
         self._on_plugin_response_cb: Optional[Callable] = None
         self._client_connect_task: asyncio.Task = None
+        self._client_disconnect_task: asyncio.Task = None
         self._plugin_loaded_task: asyncio.Task = None
         self._plugin_response_task: asyncio.Task = None
 
@@ -40,11 +42,15 @@ class AppState:
         print("Startup complete")
 
         self._client_connect_task = asyncio.create_task(self._client_connect_handler())
+        self._client_disconnect_task = asyncio.create_task(self._client_disconnect_handler())
         self._plugin_loaded_task = asyncio.create_task(self._plugin_loaded_handler())
         self._plugin_response_task = asyncio.create_task(self._plugin_result_handler())
 
     def on_client_connect(self, callback:Callable):
         self._on_client_connect_cb = callback
+
+    def on_client_disconnect(self, callback:Callable):
+        self._on_client_disconnect_cb = callback
 
     def on_plugin_loaded(self, callback:Callable):
         self._on_plugin_loaded_cb = callback
@@ -75,6 +81,17 @@ class AppState:
         except asyncio.CancelledError:
             sub.unsubscribe()
 
+    async def _client_disconnect_handler(self):
+        try:
+            sub = await self.nc.subscribe('client.disconnect')
+            async for _ in sub.messages:
+                print('Got disconnect request')
+                res = self._on_client_disconnect_cb()
+                if isinstance(res, Awaitable):
+                    await res
+        except asyncio.CancelledError:
+            sub.unsubscribe()
+
     async def _plugin_loaded_handler(self):
         try:
             sub = await self.nc.subscribe('plugins.loaded')
@@ -87,6 +104,7 @@ class AppState:
 
     async def shutdown(self):
         self._client_connect_task.cancel()
+        self._client_disconnect_task.cancel()
         self._plugin_loaded_task.cancel()
         self._plugin_response_task.cancel()
 

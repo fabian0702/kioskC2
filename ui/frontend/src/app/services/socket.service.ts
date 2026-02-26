@@ -12,6 +12,12 @@ export interface MethodDefinition {
   parameters: MethodParameter[];
 }
 
+export interface ClientInfo {
+  id: string;
+  connected: boolean;
+  status: string;
+}
+
 export interface CommandResult {
   id: string;
   result: any;
@@ -26,7 +32,7 @@ export interface CommandResult {
 export class SocketService extends Socket {
   
   public messages = signal<string[]>([]);
-  public clients = signal<string[]>([]);
+  public clients = signal<ClientInfo[]>([]);
   public methods = signal<Record<string, MethodDefinition>>({});
   public commandResults = signal<Record<string, CommandResult>>({});
   private activeClientId: string | null = null;
@@ -42,10 +48,8 @@ export class SocketService extends Socket {
 
     this.fromEvent('clients.response').subscribe((data: any) => {
       console.log('Clients received:', data);
-      
-      const clients = Array.isArray(data) ? data : (data?.clients || []);
-      
-      this.clients.set(clients);
+
+      this.clients.set(this.parseClientsPayload(data));
     });
   }
 
@@ -120,7 +124,7 @@ export class SocketService extends Socket {
     
     this.emit('plugin.run', payload, (id: string) => { 
       console.log(`Executed ID: ${id}`);
-      this.commandResults.update(results => ({
+      this.commandResults.update((results: Record<string, CommandResult>) => ({
         ...results,
         [id]: {
           id: id,
@@ -171,5 +175,73 @@ export class SocketService extends Socket {
     }
 
     return 'success';
+  }
+
+  private parseClientsPayload(data: any): ClientInfo[] {
+    if (Array.isArray(data)) {
+      return data.map((client) => ({
+        id: String(client),
+        connected: true,
+        status: 'connected'
+      }));
+    }
+
+    const candidate = data?.clients && typeof data.clients === 'object' && !Array.isArray(data.clients)
+      ? data.clients
+      : data;
+
+    if (!candidate || typeof candidate !== 'object') {
+      return [];
+    }
+
+    return Object.entries(candidate).map(([id, value]) => {
+      const status = this.extractClientStatus(value);
+      return {
+        id,
+        connected: status === 'connected',
+        status
+      };
+    });
+  }
+
+  private extractClientStatus(value: any): string {
+    if (typeof value === 'string') {
+      return this.normalizeStatus(value);
+    }
+
+    if (value instanceof Uint8Array) {
+      return this.normalizeStatus(new TextDecoder().decode(value));
+    }
+
+    if (Array.isArray(value)) {
+      return this.normalizeStatus(String.fromCharCode(...value));
+    }
+
+    if (value && typeof value === 'object') {
+      if (value.type === 'Buffer' && Array.isArray(value.data)) {
+        return this.normalizeStatus(String.fromCharCode(...value.data));
+      }
+
+      const nested = value.value ?? value.status ?? value.state ?? value.data;
+      if (nested !== undefined) {
+        return this.extractClientStatus(nested);
+      }
+    }
+
+    return 'disconnected';
+  }
+
+  private normalizeStatus(rawStatus: string): string {
+    const status = rawStatus.trim().toLowerCase();
+
+    if (status === 'connected' || status === 'online' || status === 'true' || status === '1') {
+      return 'connected';
+    }
+
+    if (status === 'disconnected' || status === 'offline' || status === 'false' || status === '0') {
+      return 'disconnected';
+    }
+
+    return status || 'disconnected';
   }
 }

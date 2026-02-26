@@ -11,11 +11,11 @@
       <ul class="client-list">
         <li 
           *ngFor="let client of clients()" 
-          (click)="selectClient(client)"
-          [class.active]="selectedClient() === client"
+          (click)="selectClient(client.id)"
+          [class.active]="selectedClient() === client.id"
           class="client-item">
-          <span class="status-indicator"></span>
-          <span class="client-name">{{ client }}</span>
+          <span class="status-indicator" [class.disconnected]="!client.connected"></span>
+          <span class="client-name">{{ client.id }}</span>
         </li>
         <li *ngIf="clients().length === 0" class="empty-state">
           No clients connected

@@ -22,19 +22,23 @@ sio_app = socketio.ASGIApp(sio, on_startup=state.startup, on_shutdown=state.shut
 
 async def plugin_response(client_id: str):
     """
-    Background task: Subscribes to a specific NATS subject, 
-    waits for a single response, and emits it via Socket.IO.
+    Background task: Subscribes to a specific NATS subject and emits it via Socket.IO.
     """
     if not state.nc:
         return
     
     await sio.emit(f'plugin.response.{client_id}')
 
+state.on_plugin_response(plugin_response)
+
 async def request_clients():
+    print("Requesting clients...")
     try:
-        clients = await state.client_kv.keys()
+        clients = {key: (await state.client_kv.get(key)).value.decode() for key in await state.client_kv.keys()}
     except NoKeysError:
-        clients = []
+        clients = {}
+
+    print(clients)
     await sio.emit('clients.response', clients)
 
 @sio.on('results.request')
@@ -61,7 +65,8 @@ async def get_clients(sid: str):
     await request_clients()
 
 state.on_client_connect(request_clients)
-state.on_plugin_response(plugin_response)
+state.on_client_disconnect(request_clients)
+
 
 async def request_methods():
     if not state.method_kv:
