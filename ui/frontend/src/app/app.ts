@@ -117,6 +117,15 @@ export class App implements OnInit {
     return typeof result === 'string' && result.startsWith('data:image/');
   }
 
+  isAudio(result: any): boolean {
+    return typeof result === 'string' && result.startsWith('data:audio/');
+  }
+
+  deleteResult(id: string) {
+    const client = this.selectedClient();
+    if (client) this.socketService.deleteResult(client, id);
+  }
+
   confirmDelete() {
     const clientId = this.pendingDeleteClientId();
     if (!clientId) {

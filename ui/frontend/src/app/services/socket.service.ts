@@ -119,6 +119,15 @@ export class SocketService extends Socket {
     this.emit('client.remove', clientId);
   }
 
+  deleteResult(clientId: string, resultId: string) {
+    this.commandResults.update(results => {
+      const updated = { ...results };
+      delete updated[resultId];
+      return updated;
+    });
+    this.emit('result.delete', { client_id: clientId, result_id: resultId });
+  }
+
   runMethod(targetClient: string, operation: string, kwargs: any, callback?: (id: string) => void) {
     const payload = {
       client_id: targetClient,

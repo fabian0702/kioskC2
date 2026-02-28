@@ -102,6 +102,18 @@ async def get_methods(sid: str):
 async def remove_client(sid: str, client_id: str):
     await state.remove_client(client_id)
 
+@sio.on('result.delete')
+async def delete_result(sid: str, data: dict):
+    client_id = data.get('client_id')
+    result_id  = data.get('result_id')
+    if not client_id or not result_id:
+        return
+    try:
+        result_bucket = await state.get_or_create_kv(f"results_{client_id}")
+        await result_bucket.purge(result_id)
+    except Exception as e:
+        print(f"Error deleting result {result_id} for client {client_id}: {e}")
+
 @sio.on('plugin.run')
 async def run_plugin(sid: str, plugin_args: dict):
     if not state.js:
