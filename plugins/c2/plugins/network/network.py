@@ -57,4 +57,5 @@ class NetworkPlugin(BasePlugin):
                     "body":    str(reason) if reason is not None else str(e),
                 }
 
-        return await asyncio.get_event_loop().run_in_executor(None, _do_fetch)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _do_fetch)
