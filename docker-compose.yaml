@@ -94,7 +94,7 @@ services:
       - ./traefik/traefik.yml:/traefik.yml
       - ./traefik/dynamic.yml:/dynamic.yml
       # mkcert CA so traefik trusts the nginx TLS cert when acting as an OIDC HTTP client
-      - /home/giank/.local/share/mkcert/rootCA.pem:/etc/ssl/certs/mkcert-ca.crt:ro
+      - ${MKCERT_ROOT_CA:-/home/giank/.local/share/mkcert/rootCA.pem}:/etc/ssl/certs/mkcert-ca.crt:ro
     environment:
       # Go's crypto/tls appends SSL_CERT_FILE to the system cert pool, doesn't replace it
       - SSL_CERT_FILE=/etc/ssl/certs/mkcert-ca.crt
