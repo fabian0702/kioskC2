@@ -37,7 +37,8 @@ app.mount('/static/', static)
 
 @app.get("/")
 def root(request:Request):
-    return RedirectResponse(url=f"http://{token_hex(8)}.{request.headers.get('host', 'localhost')}/client")
+    host = request.headers.get('host', 'localhost').removeprefix('clients.')
+    return RedirectResponse(url=f"http://{token_hex(8)}.{host}/client")
 
 @app.get("/client")
 def client_page():
