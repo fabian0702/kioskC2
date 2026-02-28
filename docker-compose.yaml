@@ -56,6 +56,20 @@ services:
       - traefik.http.routers.api.rule=PathPrefix(`/`)
       - traefik.enable=true
 
+  dex:
+    image: ghcr.io/dexidp/dex:v2.42.0
+    command: dex serve /etc/dex/config.yml
+    volumes:
+      - ./dex/config.yml:/etc/dex/config.yml:ro
+      - dex_data:/var/dex
+    restart: unless-stopped
+    networks:
+      - c2
+    labels:
+      - traefik.enable=true
+      - traefik.http.services.dex.loadbalancer.server.port=5556
+      - traefik.http.routers.dex.rule=Host(`auth.localhost`) || Host(`auth.kiosk.mnta.in`)
+
   nginx:
     image: nginx:1.27-alpine
     depends_on:
@@ -68,7 +82,10 @@ services:
       - "80:80"
       - "443:443"
     networks:
-      - c2
+      c2:
+        aliases:
+          - auth.localhost       # traefik resolves this to reach dex via nginx→traefik→dex
+          - auth.kiosk.mnta.in
 
   traefik:
     image: traefik:3.6
@@ -76,12 +93,18 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/traefik.yml
       - ./traefik/dynamic.yml:/dynamic.yml
+      # mkcert CA so traefik trusts the nginx TLS cert when acting as an OIDC HTTP client
+      - /home/giank/.local/share/mkcert/rootCA.pem:/etc/ssl/certs/mkcert-ca.crt:ro
+    environment:
+      # Go's crypto/tls appends SSL_CERT_FILE to the system cert pool, doesn't replace it
+      - SSL_CERT_FILE=/etc/ssl/certs/mkcert-ca.crt
     networks:
       - c2
     restart: unless-stopped
 
 volumes:
   static_plugins:
+  dex_data:
 
 networks:
   c2:

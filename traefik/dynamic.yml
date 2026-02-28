@@ -4,14 +4,17 @@ http:
       plugin:
         traefik-oidc-auth:
           Provider:
-            Url: ...
-            ClientId: ...
-            ClientSecret: ...
+            Url: https://auth.localhost
+            ClientId: traefik
+            ClientSecret: traefik-local-secret
           LogLevel: DEBUG
-          BypassAuthenticationRule: PathPrefix(`/client`)
+          BypassAuthenticationRule: >
+            PathPrefix(`/client`) ||
+            Host(`auth.localhost`) || Host(`auth.kiosk.mnta.in`) ||
+            HostRegexp(`clients\..*`)
           Scopes:
             - openid
             - profile
             - email
           SessionCookie:
-            Secure: false
+            Secure: true

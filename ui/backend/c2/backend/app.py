@@ -48,7 +48,11 @@ async def request_results(sid:str, client_id:str):
     try:
         result_bucket = await state.get_or_create_kv(f"results_{client_id}")
         results = []
-        for key in await result_bucket.keys():
+        try:
+            keys = await result_bucket.keys()
+        except NoKeysError:
+            keys = []
+        for key in keys:
             entry = await result_bucket.get(key)
             if entry.value:
                 results.append(json.loads(entry.value))
@@ -70,10 +74,15 @@ state.on_client_disconnect(request_clients)
 async def request_methods():
     if not state.method_kv:
         return
-    
+
     print("Requesting methods...")
 
-    method_names = await state.method_kv.keys()
+    try:
+        method_names = await state.method_kv.keys()
+    except NoKeysError:
+        await sio.emit('methods.response', {})
+        return
+
     methods = {}
 
     for name in method_names:

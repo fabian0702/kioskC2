@@ -113,6 +113,10 @@ export class App implements OnInit {
     this.pendingDeleteClientId.set(null);
   }
 
+  isScreenshot(result: any): boolean {
+    return typeof result === 'string' && result.startsWith('data:image/');
+  }
+
   confirmDelete() {
     const clientId = this.pendingDeleteClientId();
     if (!clientId) {

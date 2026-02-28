@@ -468,10 +468,18 @@
     padding: 0.75rem 1rem;
     color: #d4d4d4;
     overflow-x: auto;
-    
+
     pre {
       margin: 0;
       white-space: pre-wrap;
+    }
+
+    .screenshot-img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      border-radius: var(--radius-md);
+      border: 1px solid #333;
     }
   }
 }

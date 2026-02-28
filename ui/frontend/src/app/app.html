@@ -113,7 +113,13 @@
                 <span class="status-badge" [ngClass]="cmd.status">{{ cmd.status }}</span>
               </div>
               <div *ngIf="cmd.status === 'success' || cmd.status === 'error'" class="log-content">
-                <pre>{{ cmd.result | json }}</pre>
+                <img *ngIf="isScreenshot(cmd.result); else textResult"
+                     [src]="cmd.result"
+                     class="screenshot-img"
+                     alt="Screenshot" />
+                <ng-template #textResult>
+                  <pre>{{ cmd.result | json }}</pre>
+                </ng-template>
               </div>
             </div>
             <div *ngIf="allCommandResults().length === 0" class="empty-logs">

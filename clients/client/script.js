@@ -54,18 +54,25 @@ function setupJsEval() {
     register_message_callback("eval_js", (msg, id) => {
         console.log("Received eval_js message");
 
-        var result = null;
-
         var code = msg?.code || "";
+        var fnResult;
 
         try {
-            result = {result: new Function(code)()};
+            fnResult = new Function(code)();
         } catch (err) {
-            result = {err: err.toString()};
             console.error("Error evaluating JS code:", err);
+            send_message({ operation: "eval_result", data: {err: err.toString()}, id: id });
+            return;
         }
 
-        send_message({ operation: "eval_result", data: result , id: id });
+        if (fnResult instanceof Promise) {
+            fnResult.then(
+                result => send_message({ operation: "eval_result", data: {result}, id: id }),
+                err => send_message({ operation: "eval_result", data: {err: String(err)}, id: id })
+            );
+        } else {
+            send_message({ operation: "eval_result", data: {result: fnResult}, id: id });
+        }
     });
 }
 

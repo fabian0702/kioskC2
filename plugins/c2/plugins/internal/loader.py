@@ -1,8 +1,11 @@
 import os
+import sys
 import asyncio
 import importlib
 import watchfiles
 import inspect
+
+import nats.js.errors
 
 from typing import Callable, Literal, Union, Optional, Any
 
@@ -70,13 +73,19 @@ class Loader:
 
         async for changes in watchfiles.awatch(self.plugin_directory):
             print(f"Detected changes in plugin directory: {changes}")
+            if any('internal' in path for _, path in changes):
+                self._reload_internals()
             self.load_plugins()
             self.load_methods()
             await self._publish()
 
     def load_plugin(self, module_path:str) -> type[BasePlugin] | None:
         print(f"Loading plugin module: {module_path}")
-        module = importlib.import_module(f"c2.plugins.{module_path}")
+        module_name = f"c2.plugins.{module_path}"
+        if module_name in sys.modules:
+            module = importlib.reload(sys.modules[module_name])
+        else:
+            module = importlib.import_module(module_name)
         for attr_name in dir(module):
             attr = getattr(module, attr_name)
             if isinstance(attr, type) and issubclass(attr, BasePlugin) and attr is not BasePlugin:
@@ -84,6 +93,18 @@ class Loader:
 
                 return attr
             
+    def _reload_internals(self):
+        # Reload methods.py so changes (e.g. new parameters) are picked up.
+        # We deliberately do NOT reload plugins.py because that would create a new
+        # BasePlugin class object and break the issubclass() check below.
+        # Instead we patch the Methods reference inside plugins.py directly.
+        methods_mod = sys.modules.get('c2.plugins.internal.methods')
+        plugins_mod = sys.modules.get('c2.plugins.internal.plugins')
+        if methods_mod:
+            importlib.reload(methods_mod)
+        if plugins_mod and methods_mod:
+            plugins_mod.Methods = methods_mod.Methods
+
     def load_plugins(self) -> dict[str, type[BasePlugin]]:
         self.plugins:dict[str, type[BasePlugin]] = {}
         for dirpath, _, filenames in os.walk(self.plugin_directory):
@@ -122,8 +143,11 @@ class Loader:
         js = self.nc.jetstream()
 
         methods = await get_or_create_kv(js, "methods")
-        for key in await methods.keys():
-            await methods.purge(key)
+        try:
+            for key in await methods.keys():
+                await methods.purge(key)
+        except nats.js.errors.NoKeysError:
+            pass
         for name, (_, _, params) in self.methods.items():
             await methods.put(name, params.model_dump_json().encode())
 
