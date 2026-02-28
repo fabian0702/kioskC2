@@ -26,11 +26,11 @@ class Methods:
         self.js = nc.jetstream()
         self.client_id = client_id
 
-    async def _wait_for_response(self, operation_id:str):
+    async def _wait_for_response(self, operation_id:str, timeout:float = 10):
         print(f'Waiting for msg on client.response.{self.client_id}.{operation_id}')
         sub = await self.nc.subscribe(f"client.response.{self.client_id}.{operation_id}", max_msgs=1)
         try:
-            response_msg = await sub.next_msg(timeout=10)
+            response_msg = await sub.next_msg(timeout=timeout)
         except NatsTimeoutError:
             raise TimeoutError("Response timed out")
         response = ClientMessage.model_validate_json(response_msg.data.decode())
@@ -66,12 +66,14 @@ class Methods:
     async def _send_client_msg(self, msg:ClientMessage):
         await self.nc.publish(f"client.operations.{self.client_id}", msg.model_dump_json().encode())
 
-    async def eval_js(self, code: str):
+    async def eval_js(self, code: str, timeout: float = 10):
         """
         Executes arbitrary code on the client and returns it's result or a error
-        
+
         :param code: the javascript code to execute
         :type code: str
+        :param timeout: seconds to wait for a response before raising TimeoutError
+        :type timeout: float
 
         Raises JSExecutionError if there is a error in the js code.
         """
@@ -80,7 +82,7 @@ class Methods:
 
         await self._send_client_msg(msg)
 
-        response = await self._wait_for_response(msg.id)
+        response = await self._wait_for_response(msg.id, timeout=timeout)
         
         if response.get("err"):
             print(f"Error executing JS code: {response['err']}")

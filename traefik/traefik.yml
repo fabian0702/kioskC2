@@ -8,6 +8,8 @@ accesslog:
 entryPoints:
   web:
     address: :80
+    forwardedHeaders:
+      insecure: true   # all traffic comes from nginx on the same Docker network
     http:
       middlewares:
         - oidc-auth@file

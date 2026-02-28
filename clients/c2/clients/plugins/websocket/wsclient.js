@@ -7,7 +7,8 @@ class WebsocketPlugin extends CommunicationPlugin {
     constructor() {
         super();
 
-        this.ws = new WebSocket(`ws://${window.location.host}/clients/ws/`);
+        const wsScheme = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        this.ws = new WebSocket(`${wsScheme}://${window.location.host}/clients/ws/`);
 
         this.ws.addEventListener("open", () => {
             console.log("WebsocketPlugin: Connected to WebSocket");

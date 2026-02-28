@@ -109,11 +109,24 @@
             <div *ngFor="let cmd of allCommandResults()" class="log-entry">
               <div class="log-meta">
                 <span class="log-op">{{ cmd.operation || 'unknown' }}</span>
-                <span class="log-time">[{{ cmd.id.substring(0, 8) }}]</span>
-                <span class="status-badge" [ngClass]="cmd.status">{{ cmd.status }}</span>
+                <div class="log-meta-right">
+                  <span class="log-time">[{{ cmd.id.substring(0, 8) }}]</span>
+                  <span class="status-badge" [ngClass]="cmd.status">{{ cmd.status }}</span>
+                  <button (click)="deleteResult(cmd.id)" class="delete-log-btn" title="Delete entry">&times;</button>
+                </div>
               </div>
               <div *ngIf="cmd.status === 'success' || cmd.status === 'error'" class="log-content">
-                <pre>{{ cmd.result | json }}</pre>
+                <ng-container *ngIf="isScreenshot(cmd.result); else audioCheck">
+                  <img [src]="cmd.result" class="screenshot-img" alt="Screenshot" />
+                </ng-container>
+                <ng-template #audioCheck>
+                  <ng-container *ngIf="isAudio(cmd.result); else textResult">
+                    <audio controls [src]="cmd.result" class="audio-player"></audio>
+                  </ng-container>
+                </ng-template>
+                <ng-template #textResult>
+                  <pre>{{ cmd.result | json }}</pre>
+                </ng-template>
               </div>
             </div>
             <div *ngIf="allCommandResults().length === 0" class="empty-logs">

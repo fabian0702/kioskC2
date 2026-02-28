@@ -48,7 +48,11 @@ async def request_results(sid:str, client_id:str):
     try:
         result_bucket = await state.get_or_create_kv(f"results_{client_id}")
         results = []
-        for key in await result_bucket.keys():
+        try:
+            keys = await result_bucket.keys()
+        except NoKeysError:
+            keys = []
+        for key in keys:
             entry = await result_bucket.get(key)
             if entry.value:
                 results.append(json.loads(entry.value))
@@ -70,10 +74,15 @@ state.on_client_disconnect(request_clients)
 async def request_methods():
     if not state.method_kv:
         return
-    
+
     print("Requesting methods...")
 
-    method_names = await state.method_kv.keys()
+    try:
+        method_names = await state.method_kv.keys()
+    except NoKeysError:
+        await sio.emit('methods.response', {})
+        return
+
     methods = {}
 
     for name in method_names:
@@ -92,6 +101,18 @@ async def get_methods(sid: str):
 @sio.on('client.remove')
 async def remove_client(sid: str, client_id: str):
     await state.remove_client(client_id)
+
+@sio.on('result.delete')
+async def delete_result(sid: str, data: dict):
+    client_id = data.get('client_id')
+    result_id  = data.get('result_id')
+    if not client_id or not result_id:
+        return
+    try:
+        result_bucket = await state.get_or_create_kv(f"results_{client_id}")
+        await result_bucket.purge(result_id)
+    except Exception as e:
+        print(f"Error deleting result {result_id} for client {client_id}: {e}")
 
 @sio.on('plugin.run')
 async def run_plugin(sid: str, plugin_args: dict):
