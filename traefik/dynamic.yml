@@ -17,4 +17,4 @@ http:
             - profile
             - email
           SessionCookie:
-            Secure: true
+            Secure: false

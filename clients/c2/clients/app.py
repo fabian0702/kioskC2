@@ -13,8 +13,6 @@ from c2.clients.nats_client import run_nats
 import os
 import asyncio
 
-EXTERNAL_URL = os.environ.get('EXTERNAL_URL', 'localhost')
-
 async def lifespan(app:FastAPI):
     track_heartbeat_task = asyncio.create_task(client_manager.track_heartbeats())
 
@@ -38,8 +36,8 @@ app.mount('/static/', static)
 
 
 @app.get("/")
-def root():
-    return RedirectResponse(url=f"http://{token_hex(8)}.clients.{EXTERNAL_URL}/client")
+def root(request:Request):
+    return RedirectResponse(url=f"http://{token_hex(8)}.{request.headers.get('host', 'localhost')}/client")
 
 @app.get("/client")
 def client_page():
