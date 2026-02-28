@@ -47,5 +47,15 @@ class NetworkPlugin(BasePlugin):
                     "headers": dict(e.headers) if e.headers else {},
                     "body":    e.read().decode("utf-8", errors="replace"),
                 }
+            except urllib.error.URLError as e:
+                # Network-level error (DNS failure, connection refused, timeout, etc.)
+                reason = getattr(e, "reason", None)
+                return {
+                    "status":  0,
+                    "ok":      False,
+                    "headers": {},
+                    "body":    str(reason) if reason is not None else str(e),
+                }
 
-        return await asyncio.get_event_loop().run_in_executor(None, _do_fetch)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _do_fetch)
