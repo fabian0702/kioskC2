@@ -7,47 +7,64 @@ class WebRTCLeaksPlugin(BasePlugin):
     async def get_ips(self) -> list:
         """Discovers local/VPN IP addresses that the browser leaks via WebRTC.
 
-        Creates an RTCPeerConnection, adds a data channel to trigger candidate
-        gathering, and collects all ICE candidates. IPv4 and IPv6 addresses
-        embedded in the candidate strings are extracted and returned.
+        Creates an RTCPeerConnection, adds a data channel to trigger ICE candidate
+        gathering, and extracts IPv4 addresses from the candidate lines.
 
-        No STUN/TURN servers are used, so only host candidates (local network
-        interfaces) are gathered. This works even when the user is behind a NAT
-        or VPN, and does NOT require any browser permissions.
+        The IP is read from the correct token (index 4) in the candidate string:
+            candidate:<foundation> <comp> <proto> <priority> <ip> <port> typ <type>
 
-        :return: List of unique IP address strings discovered
+        No STUN/TURN servers are used so only host candidates (local interfaces)
+        are gathered.  Chrome may hide local IPs depending on its
+        "WebRTC IP handling policy" setting — in that case an empty list is returned.
+
+        :return: List of unique IPv4 addresses discovered
         :rtype: list
         """
         return await self.methods.eval_js('''
             return new Promise(function(resolve) {
                 var ips  = [];
                 var seen = new Set();
-                var pc   = new RTCPeerConnection({ iceServers: [] });
-
-                pc.createDataChannel('');
+                var done = false;
 
                 var finish = function() {
-                    pc.close();
+                    if (done) return;
+                    done = true;
+                    try { pc.close(); } catch(e) {}
                     resolve(ips);
                 };
 
-                // Collect IPs from each candidate line
-                pc.onicecandidate = function(e) {
-                    if (!e.candidate) { finish(); return; }
-                    var line = e.candidate.candidate;
-                    var matches = line.match(/(\d+\.\d+\.\d+\.\d+|[0-9a-f]{0,4}(?::[0-9a-f]{0,4}){2,7})/gi);
-                    if (matches) {
-                        matches.forEach(function(ip) {
-                            if (!seen.has(ip)) { seen.add(ip); ips.push(ip); }
-                        });
-                    }
-                };
+                try {
+                    var pc = new RTCPeerConnection({ iceServers: [], iceTransportPolicy: 'all' });
 
-                pc.createOffer()
-                    .then(function(offer) { return pc.setLocalDescription(offer); })
-                    .catch(finish);
+                    pc.onicecandidate = function(e) {
+                        if (!e.candidate) { finish(); return; }
 
-                // Safety timeout in case onicecandidate never fires null
-                setTimeout(finish, 4000);
+                        // Candidate SDP line:
+                        //   candidate:<f> <comp> <proto> <pri> <IP> <port> typ <type> ...
+                        var parts = e.candidate.candidate.split(' ');
+                        if (parts.length >= 5) {
+                            var ip = parts[4];
+                            if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(ip) && !seen.has(ip)) {
+                                seen.add(ip);
+                                ips.push(ip);
+                            }
+                        }
+                    };
+
+                    pc.onicegatheringstatechange = function() {
+                        if (pc.iceGatheringState === 'complete') finish();
+                    };
+
+                    pc.createDataChannel('x');
+                    pc.createOffer()
+                        .then(function(o) { return pc.setLocalDescription(o); })
+                        .catch(finish);
+
+                } catch(e) {
+                    resolve([]);
+                    return;
+                }
+
+                setTimeout(finish, 5000);
             });
-        ''', timeout=7)
+        ''', timeout=8)
