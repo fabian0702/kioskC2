@@ -1,4 +1,5 @@
 import nats
+import asyncio
 
 from nats.js import JetStreamContext
 from nats.js.errors import NotFoundError
@@ -23,45 +24,45 @@ async def get_or_create_bucket(js:JetStreamContext, bucket_name: str):
         return kv
 
 async def run_nats():
-    nc = await nats.connect("nats://nats:4222")
-    js = nc.jetstream()
+    try:
+        nc = await nats.connect("nats://nats:4222")
+        js = nc.jetstream()
 
-    clients_bucket = await get_or_create_bucket(js, 'clients')
+        clients_bucket = await get_or_create_bucket(js, 'clients')
 
-    async def handle_message(id:str, msg:ClientRunMessage):
-        print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {msg.data}")
-        await nc.publish(f'client.response.{id}.{msg.id}', msg.model_dump_json().encode())
+        async def handle_message(id:str, msg:ClientRunMessage):
+            print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {msg.data}")
+            await nc.publish(f'client.response.{id}.{msg.id}', msg.model_dump_json().encode())
 
-    client_manager.on_msg(handle_message)
+        client_manager.on_msg(handle_message)
 
-    async def handle_connect(id:str):
-        await nc.publish('client.connect', id.encode())
-        await clients_bucket.put(id, b'connected')
+        async def handle_connect(id:str):
+            await nc.publish('client.connect', id.encode())
+            await clients_bucket.put(id, b'connected')
 
-    client_manager.on_connect(handle_connect)
+        client_manager.on_connect(handle_connect)
 
-    async def handle_disconnect(id:str):
-        await nc.publish('client.disconnect', id.encode())
-        await clients_bucket.put(id, b'disconnected')
+        async def handle_disconnect(id:str):
+            await nc.publish('client.disconnect', id.encode())
+            await clients_bucket.put(id, b'disconnected')
 
-    client_manager.on_disconnect(handle_disconnect)
+        client_manager.on_disconnect(handle_disconnect)
 
-    sub = await nc.subscribe("client.operations.*")
+        sub = await nc.subscribe("client.operations.*")
 
-    async for msg in sub.messages:
-        print(f"Received message on subject {msg.subject}: {msg.data}")
-        id = msg.subject.removeprefix("client.operations.")
-        try:
-            parsed_msg = ClientRunMessage.model_validate_json(msg.data)
-        except Exception as e:
-            print(f"Failed to parse message for client {id} with error {e}")
-            continue
-        
-        client_manager.enqueue_message(id, parsed_msg)
-
-    await sub.unsubscribe()
-
-    await nc.drain()
+        async for msg in sub.messages:
+            print(f"Received message on subject {msg.subject}: {msg.data}")
+            id = msg.subject.removeprefix("client.operations.")
+            try:
+                parsed_msg = ClientRunMessage.model_validate_json(msg.data)
+            except Exception as e:
+                print(f"Failed to parse message for client {id} with error {e}")
+                continue
+            
+            client_manager.enqueue_message(id, parsed_msg)
+    except asyncio.CancelledError:
+        await sub.unsubscribe()
+        await nc.drain()
 
 
 if __name__ == '__main__':

@@ -15,6 +15,9 @@ class TimeoutError(Exception):
 class JSExecutionError(Exception):
     pass
 
+class BundlerException(Exception):
+    pass
+
 class ClientMessage(BaseModel):
     operation: str
     data: dict
@@ -115,12 +118,18 @@ class Methods:
         """
 
         msg = ClientMessage(operation="bundle", data={"url": url})
-        page_name = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
+        raw_reponse = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
+        response = ClientMessage.model_validate_json(raw_reponse.data)
+
+        if response.operation != 'response':
+            raise BundlerException(response.data.get('error', str(response.data)))
+
+        page_name = response.data.get('result', str(response.data))
 
         print(f"Got page with name: {page_name}")
 
         object_store = await self.js.object_store("bundler")
-        page_data = await object_store.get(page_name.data.decode())
+        page_data = await object_store.get(page_name)
         
         return page_data.data.decode()
     
@@ -135,9 +144,15 @@ class Methods:
         """
 
         msg = ClientMessage(operation="preview", data={"url": url})
-        screenshot_name = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
+        raw_reponse = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
+        response = ClientMessage.model_validate_json(raw_reponse)
+
+        if response.operation != 'response':
+            raise BundlerException(response.data.get('error', str(response.data)))
+
+        screenshot_name = response.data.get('result', str(response.data))
 
         object_store = await self.js.object_store("bundler")
-        screenshot_data = await object_store.get(screenshot_name.data.decode())
+        screenshot_data = await object_store.get(screenshot_name)
         
         return screenshot_data.data

@@ -82,16 +82,23 @@ async def main():
             print("no url in the request found")
             continue
 
-        match message.operation:
-            case "bundle":
-                page_name = await handle_fetch_request(message.data.get('url'), nc)
-                print(f"Finished building page with name {page_name}")
-                await msg.respond(page_name.encode())
-            case "preview":
-                screenshot_name = await handle_preview_request(nc, message.data.get('url'))
-                await msg.respond(screenshot_name.encode())
-            case _:
-                print(f"Unknown operation: {message.operation}")
+        try:
+            match message.operation:
+                case "bundle":
+                    page_name = await handle_fetch_request(message.data.get('url'), nc)
+                    print(f"Finished building page with name {page_name}")
+                    response = ClientMessage(operation='response', data={'result': page_name}, id=message.id)
+                case "preview":
+                    screenshot_name = await handle_preview_request(nc, message.data.get('url'))
+                    response = ClientMessage(operation='response', data={'result': screenshot_name}, id=message.id)
+                case _:
+                    print(f"Unknown operation: {message.operation}")
+                    response = ClientMessage(operation='error', data={'error': f'Unknown operation: {message.operation}'}, id=message.id)
+        except Exception as e:
+            print(e)
+            response = ClientMessage(operation='error', data={'error': str(e)}, id=message.id)
+
+        await msg.respond(response.model_dump_json().encode())
 
 if __name__ == '__main__':
     asyncio.run(main())

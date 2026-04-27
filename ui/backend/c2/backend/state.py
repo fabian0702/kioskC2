@@ -67,7 +67,7 @@ class AppState:
                 if isinstance(res, Awaitable):
                     await res
         except asyncio.CancelledError:
-            sub.unsubscribe()
+            await sub.unsubscribe()
 
     async def _plugin_result_handler(self):
         try:
@@ -79,7 +79,7 @@ class AppState:
                 if isinstance(res, Awaitable):
                     await res
         except asyncio.CancelledError:
-            sub.unsubscribe()
+            await sub.unsubscribe()
 
     async def _client_disconnect_handler(self):
         try:
@@ -90,7 +90,7 @@ class AppState:
                 if isinstance(res, Awaitable):
                     await res
         except asyncio.CancelledError:
-            sub.unsubscribe()
+            await sub.unsubscribe()
 
     async def _plugin_loaded_handler(self):
         try:
@@ -100,7 +100,7 @@ class AppState:
                 if isinstance(res, Awaitable):
                     await res
         except asyncio.CancelledError:
-            sub.unsubscribe()
+            await sub.unsubscribe()
 
     async def shutdown(self):
         self._client_connect_task.cancel()
