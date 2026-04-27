@@ -78,17 +78,20 @@ class ClientManager:
         self.router = APIRouter(prefix="/clients")
 
     async def track_heartbeats(self):
-        while True:
-            for id, client in self.clients.items():
-                if time.time() - client.last_heartbeat < CLIENT_HEARTBEAT_TIMEOUT:
-                    continue
-                
-                if client.status == 'connected':
-                    await run_callback(self.on_disconnect_callback, id)
+        try:
+            while True:
+                for id, client in self.clients.items():
+                    if time.time() - client.last_heartbeat < CLIENT_HEARTBEAT_TIMEOUT:
+                        continue
+                    
+                    if client.status == 'connected':
+                        await run_callback(self.on_disconnect_callback, id)
 
-                client.status = 'disconnected'
+                    client.status = 'disconnected'
 
-            await asyncio.sleep(CLIENT_HEARTBEAT_INTERVAL)
+                await asyncio.sleep(CLIENT_HEARTBEAT_INTERVAL)
+        except asyncio.CancelledError:
+            print("Shutting heartbeats down...")
 
     def on_msg(self, callback:Callable[[str, ClientRunMessage], None]):
         self.on_msg_callback = callback

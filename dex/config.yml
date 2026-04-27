@@ -23,6 +23,7 @@ staticClients:
     redirectURIs:
       - https://localhost/oidc/callback
       - https://kiosk.mnta.in/oidc/callback
+      - https://kiosk.fabi07.ch/oidc/callback
 
 enablePasswordDB: true
 
