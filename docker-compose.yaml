@@ -1,61 +1,7 @@
+include: 
+  - docker-compose.prod.yaml
+
 services:
-  nats:
-    image: nats
-    # ports:
-    #   - "4222:4222"
-    #   - "8222:8222"
-    #   - "6222:6222"
-    command: "-js -m 8222"
-    restart: unless-stopped
-    networks:
-      - c2
-
-  clients:
-    build: ./clients
-    depends_on:
-      - nats
-    restart: unless-stopped
-    volumes:
-      - static_plugins:/static/plugins/
-    networks:
-      - c2
-    labels:
-      - traefik.http.services.clients.loadbalancer.server.port=8000
-      - traefik.http.routers.clients.rule=HostRegexp(`[0-9a-f]{16}\..*`) || HostRegexp(`clients\..*`)
-      - traefik.enable=true
-
-
-  website-bundler:
-    build: ./website-bundler
-    depends_on:
-      - nats
-    restart: unless-stopped
-    networks:
-      - c2
-
-  plugins:
-    build: ./plugins
-    depends_on:
-      - nats
-    restart: unless-stopped
-    volumes:
-      - ./plugins/c2/plugins/:/code/c2/plugins/   # Enable hot-reloading of plugins
-      - static_plugins:/static/
-    networks:
-      - c2
-
-  ui:
-    build: ./ui/
-    depends_on:
-      - nats
-    restart: unless-stopped
-    networks:
-      - c2
-    labels:
-      - traefik.http.services.api.loadbalancer.server.port=8000
-      - traefik.http.routers.api.rule=PathPrefix(`/`)
-      - traefik.enable=true
-
   dex:
     image: ghcr.io/dexidp/dex:v2.42.0
     command: dex serve /etc/dex/config.yml
@@ -70,41 +16,22 @@ services:
       - traefik.http.services.dex.loadbalancer.server.port=5556
       - traefik.http.routers.dex.rule=Host(`auth.localhost`) || Host(`auth.kiosk.mnta.in`)
 
-  nginx:
-    image: nginx:1.27-alpine
-    depends_on:
-      - traefik
-    restart: unless-stopped
+  certgen:
+    image: alpine:latest
+    command: >
+      sh -c "
+      apk add --no-cache openssl &&
+      mkdir -p /certs &&
+      if [ ! -f /certs/privkey.pem ]; then
+        echo 'Generating self-signed cert...';
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/privkey.pem -out /certs/fullchain.pem -subj '/CN=localhost';
+      fi
+      "
     volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - /opt/certs:/etc/nginx/certs:ro
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      c2:
-        aliases:
-          - auth.localhost       # traefik resolves this to reach dex via nginx→traefik→dex
-          - auth.kiosk.mnta.in
+      - ./nginx/certs:/certs
 
-  traefik:
-    image: traefik:3.6
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./traefik/traefik.yml:/traefik.yml
-      - ./traefik/dynamic.yml:/dynamic.yml
-      # mkcert CA so traefik trusts the nginx TLS cert when acting as an OIDC HTTP client
-      - "{MKCERT_HOME:-/home/giank/.local/share/mkcert/rootCA.pem}:/etc/ssl/certs/mkcert-ca.crt:ro"
-    environment:
-      # Go's crypto/tls appends SSL_CERT_FILE to the system cert pool, doesn't replace it
-       - SSL_CERT_FILE=/etc/ssl/certs/mkcert-ca.crt
-
-    networks:
-      - c2
-    restart: unless-stopped
 
 volumes:
-  static_plugins:
   dex_data:
 
 networks:
