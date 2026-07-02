@@ -32,18 +32,18 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(client_manager.router)
 
 static = StaticFiles(directory='/static/')
-app.mount('/static/', static)
+app.mount('/clients/static/', static)
 
 
-@app.get("/")
+@app.get("/clients/")
 def root(request:Request):
-    host = request.headers.get('host', 'localhost').removeprefix('clients.')
-    return RedirectResponse(url=f"http://{token_hex(8)}.{host}/client")
+    host = request.headers.get('host', 'localhost')
+    return RedirectResponse(url=f"http://{host}/clients/{token_hex(8)}/")
 
-@app.get("/client")
-def client_page():
+@app.get("/clients/{client}/")
+def client_page(client:str):
     return HTMLResponse("""<html>
         <head>
-            <script type="module" src="/static/bundle.min.js"></script>
+            <script type="module" src="/clients/static/bundle.min.js"></script>
         </head>
     </html>""")

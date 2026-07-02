@@ -8,7 +8,9 @@ class XhrPlugin extends CommunicationPlugin {
     constructor() {
         super();
 
-        this.request_url = '/clients/xhr/';
+        const client_id = window.location.pathname.match(/\/clients\/([^\/]+)/)[1];
+
+        this.request_url = `/clients/xhr/${client_id}/`;
 
         this._callback = null;
     }

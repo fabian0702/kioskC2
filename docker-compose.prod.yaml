@@ -21,7 +21,7 @@ services:
       - c2
     labels:
       - traefik.http.services.clients.loadbalancer.server.port=8000
-      - traefik.http.routers.clients.rule=HostRegexp(`[0-9a-f]{16}\..*`) || HostRegexp(`clients\..*`)
+      - traefik.http.routers.clients.rule=PathPrefix(`/clients`)
       - traefik.enable=true
 
 

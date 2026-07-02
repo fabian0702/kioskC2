@@ -64,10 +64,8 @@ class Client:
         self.queued_requests.append(message)
 
     @classmethod
-    def get_client(cls, request: Request):
-        hostheader = request.headers.get("host")
-        id, *_ = hostheader.split(".")
-        return client_manager.get_client(id, client_class=cls)
+    def get_client(cls, client_id:str):
+        return client_manager.get_client(client_id, client_class=cls)
 
 class ClientManager:
     def __init__(self):

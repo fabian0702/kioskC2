@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from c2.clients.base import Client
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
@@ -11,7 +11,13 @@ class WSClient(Client):
     async def websocket_endpoint(websocket: WebSocket):
         await websocket.accept()
 
-        client = WSClient.get_client(websocket)
+        client_identification:dict = await websocket.receive_json()
+
+        if not 'client' in client_identification:
+            raise HTTPException(400, 'missing client identification')
+        
+        client_id = client_identification.get('client')
+        client = WSClient.get_client(client_id)
 
         print(f'got connection from client {client.id}')
 
