@@ -35,4 +35,4 @@ class WSClient(Client):
 
 
     async def enqueue_message(self, message:ClientRunMessage):
-        self.websocket.send_json([message.model_dump()])
+        await self.websocket.send_json([message.model_dump()])
