@@ -1,5 +1,5 @@
 from c2.plugins.internal.methods import Methods
-from nats import NATS
+from c2.plugins.internal.transport import PluginTransport
 from typing import Optional, Callable, Literal, Iterable
 
 import os
@@ -50,19 +50,19 @@ class BasePlugin:
             raise NotImplementedError("Plugins must define 'name'")
         
     @classmethod
-    async def new(cls, nc:NATS, client_id: str):
+    async def new(cls, transport:PluginTransport, client_id: str):
         """
         Creates a new instance of the plugin while initializing some internal stuff
-        
-        :param nc: a instance of nats.py client
-        :type nc: NATS
+
+        :param transport: the internal hub/bundler transport
+        :type transport: PluginTransport
         :param client_id: The id of the client which is interacted with
         :type client_id: str
         :return: returns a new instance of the class
         :rtype: Self
         """
         self = cls()
-        self.methods = Methods(nc, client_id)
+        self.methods = Methods(transport, client_id)
 
         if hasattr(self, "js_file"):
             script_path = inspect.getfile(cls)

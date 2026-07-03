@@ -4,25 +4,17 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
-services:
-  nats:
-    image: nats
-    # ports:
-    #   - "4222:4222"
-    #   - "8222:8222"
-    #   - "6222:6222"
-    command: "-js -m 8222"
-    restart: unless-stopped
-    logging: *default-logging
-    networks:
-      - c2
+x-internal-hub-token: &internal-hub-token INTERNAL_HUB_TOKEN=1e9f870b5bcd13bfbcd00cd9cc17c66f1e9d653a93aaa9b13b0577336b8c1d59
 
+services:
   clients:
     build: ./clients
     depends_on:
-      - nats
+      - ui
     restart: unless-stopped
     logging: *default-logging
+    environment:
+      - *internal-hub-token
     volumes:
       - static_plugins:/static/plugins/
     networks:
@@ -35,8 +27,6 @@ services:
 
   website-bundler:
     build: ./website-bundler
-    depends_on:
-      - nats
     restart: unless-stopped
     logging: *default-logging
     networks:
@@ -45,9 +35,12 @@ services:
   plugins:
     build: ./plugins
     depends_on:
-      - nats
+      - ui
+      - website-bundler
     restart: unless-stopped
     logging: *default-logging
+    environment:
+      - *internal-hub-token
     volumes:
       - ./plugins/c2/plugins/:/code/c2/plugins/   # Enable hot-reloading of plugins
       - static_plugins:/static/
@@ -56,10 +49,10 @@ services:
 
   ui:
     build: ./ui/
-    depends_on:
-      - nats
     restart: unless-stopped
     logging: *default-logging
+    environment:
+      - *internal-hub-token
     networks:
       - c2
     labels:

@@ -45,6 +45,6 @@ class WSClient(Client):
         except Exception as e:
             # The websocket may be mid-reconnect (stale/closing reference).
             # Fall back to queued delivery instead of dropping the message
-            # and taking down the NATS consumer that called us.
+            # and taking down the hub's device-command handler that called us.
             print(f"Failed to push message to client {self.id}, falling back to queued delivery: {e}")
             await super().enqueue_message(message)

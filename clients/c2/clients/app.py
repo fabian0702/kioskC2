@@ -8,7 +8,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 
 from c2.clients.plugins.plugins import *
 from c2.clients.base import client_manager
-from c2.clients.nats_client import run_nats_supervised
+from c2.clients.hub_client import run_hub_client_supervised
 
 import os
 import asyncio
@@ -16,14 +16,14 @@ import asyncio
 async def lifespan(app:FastAPI):
     track_heartbeat_task = asyncio.create_task(client_manager.track_heartbeats())
 
-    nats_task = asyncio.create_task(run_nats_supervised())
+    hub_task = asyncio.create_task(run_hub_client_supervised())
 
     yield
 
-    nats_task.cancel()
+    hub_task.cancel()
     track_heartbeat_task.cancel()
-    
-    await nats_task
+
+    await hub_task
     await track_heartbeat_task
 
 

