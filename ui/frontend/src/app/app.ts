@@ -1,8 +1,9 @@
 import { Component, signal, inject, OnInit, computed, effect } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { SocketService, CommandResult, MethodParameter } from './services/socket.service';
+import { SocketService, CommandResult, MethodParameter, ClientInfo } from './services/socket.service';
 import { CommonModule, NgFor, NgIf, NgSwitch, NgSwitchCase, NgSwitchDefault, JsonPipe } from '@angular/common'; // added JsonPipe
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-root',
@@ -14,6 +15,7 @@ import { FormsModule } from '@angular/forms';
 export class App implements OnInit {
   protected readonly title = signal('kiosk-frontend');
   protected socketService = inject(SocketService);
+  private sanitizer = inject(DomSanitizer);
   clientJoinUrl = `${window.location.protocol}//clients.${window.location.host}/`;
   
   messages = this.socketService.messages;
@@ -50,7 +52,12 @@ export class App implements OnInit {
   showDeleteConfirm = signal(false);
   pendingDeleteClientId = signal<string | null>(null);
   deleteStatus = signal<{ type: 'success' | 'error'; message: string } | null>(null);
-  
+
+  editingClientId = signal<string | null>(null);
+  renameDraft = signal('');
+
+  selectedClientInfo = computed(() => this.clients().find(c => c.id === this.selectedClient()) ?? null);
+
   // Stores current form values for method parameters
   methodArgs = signal<any>({});
 
@@ -64,10 +71,50 @@ export class App implements OnInit {
     this.socketService.setActiveClient(client);
   }
 
-  formatMethodName(key: string): string {
-    const [plugin, action] = key.split('.');
-    const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    return action ? `${titleCase(plugin)} · ${titleCase(action)}` : titleCase(plugin);
+  startRename(client: ClientInfo, event: Event) {
+    event.stopPropagation();
+    this.editingClientId.set(client.id);
+    this.renameDraft.set(client.alias || '');
+  }
+
+  commitRename(clientId: string) {
+    if (this.editingClientId() !== clientId) {
+      return;
+    }
+    this.socketService.renameClient(clientId, this.renameDraft());
+    this.editingClientId.set(null);
+  }
+
+  cancelRename(event?: Event) {
+    event?.stopPropagation();
+    this.editingClientId.set(null);
+  }
+
+  formatLastSeen(ts: number | null | undefined): string {
+    if (!ts) {
+      return 'never';
+    }
+    const deltaSec = Math.floor((Date.now() - ts * 1000) / 1000);
+    if (deltaSec < 5) return 'just now';
+    if (deltaSec < 60) return `${deltaSec}s ago`;
+    const min = Math.floor(deltaSec / 60);
+    if (min < 60) return `${min}m ago`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `${hr}h ago`;
+    return `${Math.floor(hr / 24)}d ago`;
+  }
+
+  private titleCase(s: string): string {
+    return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  methodPluginLabel(key: string): string {
+    return this.titleCase(key.split('.')[0]);
+  }
+
+  methodActionLabel(key: string): string {
+    const action = key.split('.')[1];
+    return action ? this.titleCase(action) : '';
   }
 
   selectMethod(methodName: string) {
@@ -88,6 +135,7 @@ export class App implements OnInit {
         } else {
            if (param.type === 'bool') initialArgs[param.name] = false;
            else if (param.type === 'int') initialArgs[param.name] = 0;
+           else if (param.type === 'Literal' && param.choices?.length) initialArgs[param.name] = param.choices[0];
            else initialArgs[param.name] = '';
         }
       });
@@ -125,6 +173,51 @@ export class App implements OnInit {
 
   isAudio(result: any): boolean {
     return typeof result === 'string' && result.startsWith('data:audio/');
+  }
+
+  resultOutputType(cmd: CommandResult): 'image' | 'audio' | 'json' | 'code' | 'text' {
+    const declared = this.methods()[cmd.operation]?.output;
+    if (declared) {
+      return declared;
+    }
+    if (this.isScreenshot(cmd.result)) return 'image';
+    if (this.isAudio(cmd.result)) return 'audio';
+    return 'text';
+  }
+
+  private escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  highlightJson(value: any): SafeHtml {
+    let text: string;
+    if (typeof value === 'string') {
+      text = value;
+    } else {
+      try {
+        text = JSON.stringify(value, null, 2);
+      } catch {
+        text = String(value);
+      }
+    }
+
+    const escaped = this.escapeHtml(text);
+    const html = escaped.replace(
+      /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\btrue\b|\bfalse\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let cls = 'json-number';
+        if (/^"/.test(match)) {
+          cls = /:$/.test(match) ? 'json-key' : 'json-string';
+        } else if (match === 'true' || match === 'false') {
+          cls = 'json-bool';
+        } else if (match === 'null') {
+          cls = 'json-null';
+        }
+        return `<span class="${cls}">${match}</span>`;
+      }
+    );
+
+    return this.sanitizer.bypassSecurityTrustHtml(html);
   }
 
   deleteResult(id: string) {

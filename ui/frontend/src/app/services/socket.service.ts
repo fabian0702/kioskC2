@@ -6,11 +6,15 @@ export interface MethodParameter {
   name: string;
   type: string;
   default: any;
+  choices?: any[] | null;
+  multiline?: boolean;
+  description?: string;
 }
 
 export interface MethodDefinition {
   description: string;
   icon?: string | null;
+  output?: 'text' | 'json' | 'image' | 'audio' | 'code' | null;
   parameters: MethodParameter[];
 }
 
@@ -18,6 +22,9 @@ export interface ClientInfo {
   id: string;
   connected: boolean;
   status: string;
+  alias?: string | null;
+  lastSeen?: number | null;
+  userAgent?: string | null;
 }
 
 export interface CommandResult {
@@ -121,6 +128,10 @@ export class SocketService extends Socket {
     this.emit('client.remove', clientId);
   }
 
+  renameClient(clientId: string, alias: string) {
+    this.emit('client.rename', { client_id: clientId, alias });
+  }
+
   deleteResult(clientId: string, resultId: string) {
     this.commandResults.update(results => {
       const updated = { ...results };
@@ -211,10 +222,14 @@ export class SocketService extends Socket {
 
     return Object.entries(candidate).map(([id, value]) => {
       const status = this.extractClientStatus(value);
+      const obj = (value && typeof value === 'object' && !Array.isArray(value)) ? value as Record<string, any> : {};
       return {
         id,
         connected: status === 'connected',
-        status
+        status,
+        alias: typeof obj['alias'] === 'string' && obj['alias'].length ? obj['alias'] : null,
+        lastSeen: typeof obj['last_seen'] === 'number' ? obj['last_seen'] : null,
+        userAgent: typeof obj['user_agent'] === 'string' ? obj['user_agent'] : null,
       };
     });
   }
