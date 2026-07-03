@@ -11,7 +11,7 @@ from c2.backend.state import AppState
 
 
 static_files = {
-    '/': '/frontend/index.html',
+    '/': '/frontend/',
 }
 
 state = AppState()
