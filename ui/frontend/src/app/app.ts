@@ -182,6 +182,11 @@ export class App implements OnInit {
     }
   }
 
+  onFileChange(a: any, b: string, event: any) {
+    let target: HTMLInputElement = event.target;
+    a[b] = target && target.files && target.files[0];
+  }
+
   openDeleteConfirm(clientId: string, event: Event) {
     event.stopPropagation();
     this.pendingDeleteClientId.set(clientId);

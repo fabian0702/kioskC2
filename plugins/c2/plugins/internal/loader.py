@@ -21,15 +21,15 @@ from c2.plugins.internal.utils import get_or_create_kv
 
 PLUGIN_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../")
 
-ALLOWED_TYPES = (str, float, int, bool)
+ALLOWED_TYPES = (str, float, int, bool, bytes)
 
 PARAM_DOC_RE = re.compile(r':param\s+(\w+)\s*:\s*(.*?)(?=\n\s*:\w|\Z)', re.DOTALL)
 
 class ParameterModel(BaseModel):
     name:str
-    type:Literal['Literal', 'str', 'float', 'int', 'bool']
-    default:Optional[Union[str, float, int, bool]] = None
-    choices:Optional[list[Union[str, float, int, bool]]] = None
+    type:Literal['Literal', 'str', 'float', 'int', 'bool', 'bytes']
+    default:Optional[Union[str, float, int, bool, bytes]] = None
+    choices:Optional[list[Union[str, float, int, bool, bytes]]] = None
     multiline:bool = False
     description:str = ""
 
