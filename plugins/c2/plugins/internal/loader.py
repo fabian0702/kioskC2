@@ -11,7 +11,7 @@ from typing import Callable, Literal, Union, Optional, Any, get_origin, get_args
 from pydantic import BaseModel
 
 from c2.plugins.internal.plugins import BasePlugin
-from c2.plugins.internal.transport import PluginTransport
+from c2.plugins.internal.transport import PluginTransport, NAMESPACE
 
 
 
@@ -79,9 +79,14 @@ class Loader:
     def __init__(self, transport:PluginTransport, plugin_directory:str=PLUGIN_DIRECTORY):
         self.transport = transport
         self.plugin_directory = plugin_directory
-        
+
         self.load_plugins()
         self.load_methods()
+
+        # ui/backend holds the methods registry in memory now instead of a
+        # durable KV bucket - republish on every (re)connect so a ui restart
+        # doesn't leave it permanently empty until the next hot-reload.
+        self.transport.sio.on("connect", self._publish, namespace=NAMESPACE)
 
         self.hotreload_task = asyncio.create_task(self._hotreload())
 
