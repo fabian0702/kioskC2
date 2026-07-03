@@ -37,7 +37,7 @@ class WebsitePlugin(BasePlugin):
             bg_size = "100% auto"
 
         html = f"""<!DOCTYPE html><html><head><style>
-        * {{ background-image: url("{pic_data_url}"); 
+        html {{ background-image: url("{pic_data_url}"); 
         background-size: {bg_size};
         width: 100%;
         height: 100%;
