@@ -9,7 +9,7 @@ from nats.js import JetStreamContext
 from nats.js.kv import KeyValue
 from nats.js.errors import NotFoundError
 
-from c2.clients.base import client_manager, ClientRunMessage
+from c2.clients.base import client_manager, ClientRunMessage, _short
 
 async def put_client_info(bucket:KeyValue, id:str, status:str, last_seen:float, user_agent:Optional[str]):
     await bucket.put(id, json.dumps({
@@ -45,7 +45,7 @@ async def run_nats():
         clients_bucket = await get_or_create_bucket(js, 'clients')
 
         async def handle_message(id:str, msg:ClientRunMessage):
-            print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {msg.data}")
+            print(f"Publishing message client.response.{id}.{msg.id} with operation {msg.operation} and data {_short(msg.data)}")
             await nc.publish(f'client.response.{id}.{msg.id}', msg.model_dump_json().encode())
 
         client_manager.on_msg(handle_message)
@@ -70,7 +70,7 @@ async def run_nats():
         sub = await nc.subscribe("client.operations.*")
 
         async for msg in sub.messages:
-            print(f"Received message on subject {msg.subject}: {msg.data}")
+            print(f"Received message on subject {msg.subject}: {_short(msg.data)}")
             id = msg.subject.removeprefix("client.operations.")
             try:
                 parsed_msg = ClientRunMessage.model_validate_json(msg.data)

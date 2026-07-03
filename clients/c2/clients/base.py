@@ -12,6 +12,12 @@ import os
 CLIENT_HEARTBEAT_INTERVAL = 2
 CLIENT_HEARTBEAT_TIMEOUT = CLIENT_HEARTBEAT_INTERVAL * 5
 
+def _short(value:Any, limit:int = 100) -> str:
+    """Caps a value's string form for logging - command results can be
+    screenshots/audio/etc as base64, which must never hit the logs whole."""
+    s = str(value)
+    return s if len(s) <= limit else f"{s[:limit]}...<+{len(s) - limit} chars>"
+
 class ClientRunMessage(BaseModel):
     operation: str
     data: Any
@@ -50,14 +56,10 @@ class Client:
     async def prepare_response(self, data:dict) -> list[dict]:
         message = ClientRunMessage.model_validate(data)
 
-        print(f"Preparing response for client {self.id} with message: {message}")
-
         response = await self.manager.handle_message(self.id, message)
 
         responses = [response] + self.queued_requests
         self.queued_requests = []
-
-        print(f"Prepared response for client {self.id}: {responses}")
 
         return [msg.model_dump() for msg in responses if msg is not None]
     
@@ -108,7 +110,7 @@ class ClientManager:
         self.on_heartbeat_callback = callback
 
     async def msg_call(self, id:str, msg:ClientRunMessage):
-        print(f"ClientManager received message for client {id}: {msg}")
+        print(f"ClientManager received message for client {id}: {_short(msg)}")
 
         await run_callback(self.on_msg_callback, id, msg)
 
@@ -131,7 +133,7 @@ class ClientManager:
 
     def handle_heartbeat(self, client_id:str, message: ClientRunMessage):
         if message.data != "ping":
-            print(f"Unexpected heartbeat payload from client {client_id}: {message.data!r}")
+            print(f"Unexpected heartbeat payload from client {client_id}: {_short(message.data)}")
 
         client = self.get_client(client_id)
         client.handle_heartbeat()

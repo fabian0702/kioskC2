@@ -86,7 +86,6 @@ class AppState:
         try:
             sub = await self.nc.subscribe('plugin.response.*')
             async for msg in sub.messages:
-                print(f"Received plugin response: {msg.subject} - {msg.data.decode()}")
                 *_, client_id = msg.subject.split('.')
                 res = self._on_plugin_response_cb(client_id)
                 if isinstance(res, Awaitable):

@@ -6,7 +6,7 @@ import uvicorn
 from nats.errors import TimeoutError as NATSTimeoutError
 from nats.js.errors import NoKeysError
 
-from c2.backend.classes import PluginMessage
+from c2.backend.classes import PluginMessage, short
 from c2.backend.state import AppState
 
 
@@ -165,7 +165,7 @@ async def run_plugin(sid: str, plugin_args: dict):
     try:
         message = PluginMessage.model_validate(plugin_args)
 
-        print(f"Received request to run plugin: {message.operation} for client {message.client_id} with args {message.args} and kwargs {message.kwargs}")
+        print(f"Received request to run plugin: {message.operation} for client {message.client_id} with args {short(message.args)} and kwargs {short(message.kwargs)}")
 
         topic = f"plugin.run.{message.client_id}"
         await state.js.publish(topic, message.model_dump_json().encode())

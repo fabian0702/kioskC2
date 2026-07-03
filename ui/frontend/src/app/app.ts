@@ -99,6 +99,17 @@ export class App implements OnInit {
   selectClient(client: string) {
     this.selectedClient.set(client);
     this.socketService.setActiveClient(client);
+    this.closeSidebar();
+  }
+
+  sidebarOpen = signal(false);
+
+  toggleSidebar() {
+    this.sidebarOpen.update(open => !open);
+  }
+
+  closeSidebar() {
+    this.sidebarOpen.set(false);
   }
 
   startRename(client: ClientInfo, event: Event) {

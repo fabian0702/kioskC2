@@ -5,7 +5,9 @@ from nats.js.kv import KeyValue
 
 from c2.plugins.internal.classes import PluginMessage
 from c2.plugins.internal.loader import Loader, MethodsDict
-from c2.plugins.internal.utils import get_or_create_kv
+from c2.plugins.internal.utils import get_or_create_kv, short
+
+
 
 
 class Client:
@@ -76,7 +78,7 @@ class Client:
             await self.result_bucket.put(message.id, pending_result.model_dump_json().encode())
             await self.nc.publish(f"plugin.response.{self.client_id}")
 
-            print(f"Running method {message.operation} for client {message.client_id} with args {message.args} and kwargs {message.kwargs}")
+            print(f"Running method {message.operation} for client {message.client_id} with args {short(message.args)} and kwargs {short(message.kwargs)}")
 
             result = await self.run_method(message)
 
