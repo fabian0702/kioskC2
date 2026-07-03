@@ -20,12 +20,12 @@ from c2.plugins.internal.utils import get_or_create_kv
 
 PLUGIN_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../")
 
-ALLOWED_TYPES = (str, float, int, bool)
+ALLOWED_TYPES = (str, float, int, bool, bytes)
 
 class ParameterModel(BaseModel):
     name:str
-    type:Literal['Literal', 'str', 'float', 'int', 'bool']
-    default:Optional[Union[str, float, int, bool]] = None
+    type:Literal['Literal', 'str', 'float', 'int', 'bool', 'bytes']
+    default:Optional[Union[str, float, int, bool, bytes]] = None
 
     @staticmethod
     def is_allowed_type(val:Any, allow_empty:bool = True) -> bool:

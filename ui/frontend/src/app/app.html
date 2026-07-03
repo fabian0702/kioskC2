@@ -83,6 +83,11 @@
                            [(ngModel)]="methodArgs()[param.name]"
                            class="form-input">
 
+                    <input *ngSwitchCase="'bytes'" type="file" 
+                           [(ngModel)]="methodArgs()[param.name]"
+                           (change)="onFileChange(methodArgs(), param.name, $event)"
+                           class="form-input file-input">
+
                     <input *ngSwitchDefault type="text" 
                            [(ngModel)]="methodArgs()[param.name]"
                            class="form-input">
