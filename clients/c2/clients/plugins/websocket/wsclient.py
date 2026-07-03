@@ -22,6 +22,7 @@ class WSClient(Client):
         client_id = client_identification.get('client')
         client:WSClient = WSClient.get_client(client_id)
 
+        client.user_agent = client_identification.get('userAgent')
         client.websocket = websocket
 
         print(f'got connection from client {client.id}')
@@ -39,4 +40,11 @@ class WSClient(Client):
 
 
     async def enqueue_message(self, message:ClientRunMessage):
-        await self.websocket.send_json([message.model_dump()])
+        try:
+            await self.websocket.send_json([message.model_dump()])
+        except Exception as e:
+            # The websocket may be mid-reconnect (stale/closing reference).
+            # Fall back to queued delivery instead of dropping the message
+            # and taking down the NATS consumer that called us.
+            print(f"Failed to push message to client {self.id}, falling back to queued delivery: {e}")
+            await super().enqueue_message(message)

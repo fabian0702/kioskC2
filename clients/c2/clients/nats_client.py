@@ -1,10 +1,22 @@
 import nats
 import asyncio
+import json
+import time
+
+from typing import Optional
 
 from nats.js import JetStreamContext
+from nats.js.kv import KeyValue
 from nats.js.errors import NotFoundError
 
 from c2.clients.base import client_manager, ClientRunMessage
+
+async def put_client_info(bucket:KeyValue, id:str, status:str, last_seen:float, user_agent:Optional[str]):
+    await bucket.put(id, json.dumps({
+        "status": status,
+        "last_seen": last_seen,
+        "user_agent": user_agent,
+    }).encode())
 
 async def get_or_create_bucket(js:JetStreamContext, bucket_name: str):
     try:
@@ -38,17 +50,22 @@ async def run_nats():
 
         client_manager.on_msg(handle_message)
 
-        async def handle_connect(id:str):
+        async def handle_connect(id:str, user_agent:Optional[str] = None):
             await nc.publish('client.connect', id.encode())
-            await clients_bucket.put(id, b'connected')
+            await put_client_info(clients_bucket, id, "connected", time.time(), user_agent)
 
         client_manager.on_connect(handle_connect)
 
-        async def handle_disconnect(id:str):
+        async def handle_disconnect(id:str, last_seen:float, user_agent:Optional[str]):
             await nc.publish('client.disconnect', id.encode())
-            await clients_bucket.put(id, b'disconnected')
+            await put_client_info(clients_bucket, id, "disconnected", last_seen, user_agent)
 
         client_manager.on_disconnect(handle_disconnect)
+
+        async def handle_heartbeat(id:str, last_seen:float, user_agent:Optional[str]):
+            await put_client_info(clients_bucket, id, "connected", last_seen, user_agent)
+
+        client_manager.on_heartbeat(handle_heartbeat)
 
         sub = await nc.subscribe("client.operations.*")
 
@@ -60,13 +77,31 @@ async def run_nats():
             except Exception as e:
                 print(f"Failed to parse message for client {id} with error {e}")
                 continue
-            
-            await client_manager.enqueue_message(id, parsed_msg)
+
+            try:
+                await client_manager.enqueue_message(id, parsed_msg)
+            except Exception as e:
+                # A single client's stale/reconnecting websocket must not kill
+                # this consumer for every other client.
+                print(f"Failed to enqueue message for client {id} with error {e}")
     except asyncio.CancelledError:
         if sub:
             await sub.unsubscribe()
         if nc:
             await nc.drain()
+
+
+async def run_nats_supervised():
+    """Restarts run_nats() if it ever dies from an unhandled exception,
+    instead of silently leaving the NATS bridge dead for the process's
+    lifetime. run_nats() only returns normally when cancelled (shutdown)."""
+    while True:
+        try:
+            await run_nats()
+            return
+        except Exception as e:
+            print(f"run_nats() crashed, restarting in 2s: {e}")
+            await asyncio.sleep(2)
 
 
 if __name__ == '__main__':
