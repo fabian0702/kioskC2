@@ -1,7 +1,7 @@
 import { teardown_communication, establish_communication, send_message, register_message_callback } from "./communication_plugin.js";
 
-const heartbeat_interval = 500;
-const heartbeat_timeout = 2 * heartbeat_interval;
+const heartbeat_interval = 5000;
+const heartbeat_timeout = 30 * 1000;
 
 function setup_heartbeat_monitor() {
     var last_heartbeat = null;
