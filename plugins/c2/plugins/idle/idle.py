@@ -6,7 +6,7 @@ class IdlePlugin(BasePlugin):
     js_file = "idle.js"
     icon = "fa-clock"
 
-    @action(icon="fa-clock")
+    @action(icon="fa-clock", output="text")
     async def get_idle_time(self) -> float:
         """Returns the number of seconds since the user last interacted with the page.
 

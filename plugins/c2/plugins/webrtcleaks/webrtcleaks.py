@@ -5,7 +5,7 @@ class WebRTCLeaksPlugin(BasePlugin):
     name = "webrtcleaks"
     icon = "fa-network-wired"
 
-    @action(icon="fa-network-wired")
+    @action(icon="fa-network-wired", output="json")
     async def get_ips(self) -> list:
         """Discovers local/VPN IP addresses that the browser leaks via WebRTC.
 

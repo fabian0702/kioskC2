@@ -1,25 +1,39 @@
 from c2.plugins.internal.methods import Methods
 from nats import NATS
-from typing import Optional, Callable
+from typing import Optional, Callable, Literal, Iterable
 
 import os
 import inspect
 import shutil
 
 
-def action(*, icon: Optional[str] = None, description: Optional[str] = None):
-    """Optionally annotate a plugin method with a FontAwesome icon name (e.g.
-    "fa-camera") and/or a short description for the command execution UI.
+def action(
+    *,
+    icon: Optional[str] = None,
+    description: Optional[str] = None,
+    output: Optional[Literal['text', 'json', 'image', 'audio', 'code']] = None,
+    multiline: Optional[Iterable[str]] = None,
+):
+    """Optionally annotate a plugin method with metadata for the command execution UI:
 
-    Both are optional — an unset description falls back to the method's
-    docstring, and an unset icon falls back to the plugin's own `icon`
-    attribute (if set).
+    - icon: a FontAwesome icon name (e.g. "fa-camera"). Falls back to the
+      plugin's own `icon` attribute when unset.
+    - description: a short description. Falls back to the method's docstring
+      first line when unset.
+    - output: how the result should be rendered ("image", "audio", "json",
+      "code", or plain "text"). Left to the UI's own heuristics when unset.
+    - multiline: names of string parameters that should get a multi-line/code
+      input instead of a single-line text box.
     """
     def decorator(func: Callable) -> Callable:
         if icon is not None:
             func._icon = icon
         if description is not None:
             func._description = description
+        if output is not None:
+            func._output = output
+        if multiline is not None:
+            func._multiline = set(multiline)
         return func
     return decorator
 

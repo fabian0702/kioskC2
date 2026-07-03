@@ -9,7 +9,7 @@ class NetworkPlugin(BasePlugin):
     name = "network"
     icon = "fa-globe"
 
-    @action(icon="fa-globe")
+    @action(icon="fa-globe", output="json")
     async def fetch(self, url: str, method: str = "GET", body: str = "", timeout: float = 30) -> dict:
         """Issues an HTTP request from the C2 server and returns the response.
 

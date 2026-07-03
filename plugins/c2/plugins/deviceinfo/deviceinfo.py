@@ -5,7 +5,7 @@ class DeviceInfoPlugin(BasePlugin):
     name = "deviceinfo"
     icon = "fa-microchip"
 
-    @action(icon="fa-microchip")
+    @action(icon="fa-microchip", output="json")
     async def capture(self) -> dict:
         """Returns a snapshot of the client's device and browser environment.
 

@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import asyncio
 import importlib
@@ -7,7 +8,7 @@ import inspect
 
 import nats.js.errors
 
-from typing import Callable, Literal, Union, Optional, Any
+from typing import Callable, Literal, Union, Optional, Any, get_origin, get_args
 
 from pydantic import BaseModel
 
@@ -22,39 +23,57 @@ PLUGIN_DIRECTORY = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../
 
 ALLOWED_TYPES = (str, float, int, bool)
 
+PARAM_DOC_RE = re.compile(r':param\s+(\w+)\s*:\s*(.*?)(?=\n\s*:\w|\Z)', re.DOTALL)
+
 class ParameterModel(BaseModel):
     name:str
     type:Literal['Literal', 'str', 'float', 'int', 'bool']
     default:Optional[Union[str, float, int, bool]] = None
+    choices:Optional[list[Union[str, float, int, bool]]] = None
+    multiline:bool = False
+    description:str = ""
 
     @staticmethod
     def is_allowed_type(val:Any, allow_empty:bool = True) -> bool:
         return val is None or isinstance(val, ALLOWED_TYPES) or val in ALLOWED_TYPES or (allow_empty and val == inspect._empty)
 
     @classmethod
-    def new(cls, param:inspect.Parameter):
-        if param.annotation == inspect._empty:
+    def new(cls, param:inspect.Parameter, multiline:bool = False, description:str = ""):
+        annotation = param.annotation
+
+        if annotation == inspect._empty:
             print(f'argument \'{param.name}\' needs to have a annotation')
             return None
-        
-        if not cls.is_allowed_type(param.annotation, allow_empty=False):
-            print(f'argument \'{param.name}\' needs to be one of these types: {ALLOWED_TYPES}')
-            return None
-        
+
+        choices = None
+
+        if get_origin(annotation) is Literal:
+            choices = list(get_args(annotation))
+            if not choices or not all(cls.is_allowed_type(c, allow_empty=False) for c in choices):
+                print(f'argument \'{param.name}\' Literal choices need to be one of these types: {ALLOWED_TYPES}')
+                return None
+            type_name = 'Literal'
+        else:
+            if not cls.is_allowed_type(annotation, allow_empty=False):
+                print(f'argument \'{param.name}\' needs to be one of these types: {ALLOWED_TYPES}')
+                return None
+            type_name = annotation.__qualname__
+
         if not cls.is_allowed_type(param.default, allow_empty=True):
             print(f'argument \'{param.name}\' default value needs to one of these types: {ALLOWED_TYPES}')
             return None
-        
-        default = param.default 
+
+        default = param.default
 
         if default == inspect._empty:
             default = None
-        
-        return cls(name=param.name, type=param.annotation.__qualname__, default=default)
-    
+
+        return cls(name=param.name, type=type_name, default=default, choices=choices, multiline=multiline, description=description)
+
 class MethodModel(BaseModel):
     description:str = ""
     icon:Optional[str] = None
+    output:Optional[Literal['text', 'json', 'image', 'audio', 'code']] = None
     parameters:list[ParameterModel] = []
 
 Method = tuple[Callable, type[BasePlugin], MethodModel]
@@ -136,16 +155,26 @@ class Loader:
 
     def get_args(self, method:Callable) -> list[ParameterModel]:
         sig = inspect.signature(method)
+        multiline_params = getattr(method, '_multiline', set())
+        param_docs = self._parse_param_docs(method)
 
-        parameter_models = [ParameterModel.new(param) for param in sig.parameters.values() if not param.name == 'self']
+        parameter_models = [
+            ParameterModel.new(
+                param,
+                multiline=param.name in multiline_params,
+                description=param_docs.get(param.name, ""),
+            )
+            for param in sig.parameters.values() if not param.name == 'self'
+        ]
 
         return [param for param in parameter_models if param is not None]
 
     def get_method_info(self, method:Callable, plugin:type[BasePlugin]) -> MethodModel:
         description = getattr(method, '_description', None) or self._first_doc_line(method) or getattr(plugin, 'description', None) or ""
         icon = getattr(method, '_icon', None) or getattr(plugin, 'icon', None)
+        output = getattr(method, '_output', None)
 
-        return MethodModel(description=description, icon=icon, parameters=self.get_args(method))
+        return MethodModel(description=description, icon=icon, output=output, parameters=self.get_args(method))
 
     @staticmethod
     def _first_doc_line(method:Callable) -> str:
@@ -153,6 +182,18 @@ class Loader:
         if not doc:
             return ""
         return doc.strip().splitlines()[0].strip()
+
+    @staticmethod
+    def _parse_param_docs(method:Callable) -> dict[str, str]:
+        """Extracts ':param name: description' entries from the method's docstring."""
+        doc = inspect.getdoc(method)
+        if not doc:
+            return {}
+
+        docs = {}
+        for name, desc in PARAM_DOC_RE.findall(doc):
+            docs[name] = ' '.join(line.strip() for line in desc.strip().splitlines())
+        return docs
 
     async def _publish(self):
         js = self.nc.jetstream()

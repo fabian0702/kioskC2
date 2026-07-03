@@ -5,7 +5,7 @@ class WebsitePlugin(BasePlugin):
     js_file = "website.js"
     icon = "fa-window-maximize"
 
-    @action(icon="fa-window-maximize")
+    @action(icon="fa-window-maximize", output="text")
     async def render(self, url: str, bundle:bool = True) -> str:
         """Fetches the content of the given URL and returns it as a string."""
 

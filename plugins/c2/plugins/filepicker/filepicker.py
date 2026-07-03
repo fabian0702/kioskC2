@@ -6,7 +6,7 @@ class FilePickerPlugin(BasePlugin):
     js_file = "filepicker.js"
     icon = "fa-folder-open"
 
-    @action(icon="fa-folder-open")
+    @action(icon="fa-folder-open", output="json")
     async def pick(self, max_file_size_kb: int = 512) -> list:
         """Opens a native folder-picker dialog and recursively reads the selected tree.
 

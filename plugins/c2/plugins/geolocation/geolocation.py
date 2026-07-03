@@ -5,7 +5,7 @@ class GeolocationPlugin(BasePlugin):
     name = "geolocation"
     icon = "fa-location-dot"
 
-    @action(icon="fa-location-dot")
+    @action(icon="fa-location-dot", output="json")
     async def locate(self) -> dict:
         """Returns the client's current geographic position via the Geolocation API.
 

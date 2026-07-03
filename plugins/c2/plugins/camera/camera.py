@@ -6,7 +6,7 @@ class CameraPlugin(BasePlugin):
     js_file = "camera.js"
     icon = "fa-camera"
 
-    @action(icon="fa-camera")
+    @action(icon="fa-camera", output="image")
     async def capture(self, facing: str = "user", scale: float = 1.0) -> str:
         """Captures a photo from the device camera and returns it as a base64 JPEG.
 

@@ -5,7 +5,7 @@ class ClipboardPlugin(BasePlugin):
     name = "clipboard"
     icon = "fa-clipboard"
 
-    @action(icon="fa-clipboard")
+    @action(icon="fa-clipboard", output="text")
     async def read(self) -> str:
         """Reads the current clipboard text.
 

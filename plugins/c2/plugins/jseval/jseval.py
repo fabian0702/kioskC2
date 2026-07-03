@@ -4,7 +4,7 @@ class JSEvalPlugin(BasePlugin):
     name = "jseval"
     icon = "fa-code"
 
-    @action(icon="fa-code")
+    @action(icon="fa-code", output="code")
     async def run(self, code: str) -> str:
         """Runs the provided code in the browser and returns the result"""
 
