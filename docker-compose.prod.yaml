@@ -71,7 +71,7 @@ services:
       c2:
         aliases:
           - auth.localhost       # traefik resolves this to reach dex via nginx→traefik→dex
-          - auth.kiosk.fabi07.ch
+          - auth.kiosk.mnta.in
 
   traefik:
     image: traefik:3.6
