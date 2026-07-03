@@ -24,6 +24,8 @@ async def get_or_create_bucket(js:JetStreamContext, bucket_name: str):
         return kv
 
 async def run_nats():
+    nc = None
+    sub = None
     try:
         nc = await nats.connect("nats://nats:4222")
         js = nc.jetstream()
@@ -61,8 +63,10 @@ async def run_nats():
             
             await client_manager.enqueue_message(id, parsed_msg)
     except asyncio.CancelledError:
-        await sub.unsubscribe()
-        await nc.drain()
+        if sub:
+            await sub.unsubscribe()
+        if nc:
+            await nc.drain()
 
 
 if __name__ == '__main__':
