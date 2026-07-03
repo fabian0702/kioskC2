@@ -110,7 +110,8 @@ class ClientManager:
             return
         self.clients[client.id] = client
 
-    def get_client(self, id:str, client_class=Client, args=(), kwargs={}) -> Client:
+    def get_client(self, id:str, client_class=Client, args=(), kwargs=None) -> Client:
+        kwargs = dict(kwargs) if kwargs else {}
         if 'manager' in inspect.signature(client_class).parameters:
             kwargs['manager'] = self
         if id not in self.clients:
@@ -123,8 +124,8 @@ class ClientManager:
 
     def handle_heartbeat(self, client_id:str, message: ClientRunMessage):
         if message.data != "ping":
-            None
-        
+            print(f"Unexpected heartbeat payload from client {client_id}: {message.data!r}")
+
         client = self.get_client(client_id)
         client.handle_heartbeat()
 
