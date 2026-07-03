@@ -211,6 +211,10 @@ export class App implements OnInit {
     return 'text';
   }
 
+  resultUrl(result: any): string | null {
+    return typeof result === 'string' && /^https?:\/\/\S+$/.test(result.trim()) ? result.trim() : null;
+  }
+
   private escapeHtml(s: string): string {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }

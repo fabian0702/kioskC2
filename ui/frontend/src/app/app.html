@@ -194,6 +194,12 @@
                   <audio *ngSwitchCase="'audio'" controls [src]="cmd.result" class="audio-player"></audio>
                   <pre *ngSwitchCase="'json'" class="code-block" [innerHTML]="highlightJson(cmd.result)"></pre>
                   <pre *ngSwitchCase="'code'" class="code-block">{{ cmd.result }}</pre>
+                  <p *ngSwitchCase="'text'" class="result-text">
+                    <ng-container *ngIf="resultUrl(cmd.result) as url; else plainText">
+                      <a [href]="url" target="_blank" rel="noopener noreferrer">{{ url }}</a>
+                    </ng-container>
+                    <ng-template #plainText>{{ cmd.result }}</ng-template>
+                  </p>
                   <pre *ngSwitchDefault>{{ cmd.result | json }}</pre>
                 </ng-container>
               </div>
