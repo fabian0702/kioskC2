@@ -52,10 +52,12 @@ class ParameterModel(BaseModel):
         
         return cls(name=param.name, type=param.annotation.__qualname__, default=default)
     
-class ParameterList(BaseModel):
+class MethodModel(BaseModel):
+    description:str = ""
+    icon:Optional[str] = None
     parameters:list[ParameterModel] = []
 
-Method = tuple[Callable, type[BasePlugin], ParameterList]
+Method = tuple[Callable, type[BasePlugin], MethodModel]
 MethodsDict = dict[str, Method]
 
 class Loader:
@@ -127,17 +129,30 @@ class Loader:
         for name, plugin in self.plugins.items():
             for attr_name, attr in inspect.getmembers(plugin):
                 if inspect.isfunction(attr) and not attr_name.startswith("_"):
-                    method = (attr, plugin, self.get_args(attr))
+                    method = (attr, plugin, self.get_method_info(attr, plugin))
                     self.methods.update({f'{name}.{attr_name}': method})
 
         return self.methods
 
-    def get_args(self, method:Callable) -> ParameterList:
+    def get_args(self, method:Callable) -> list[ParameterModel]:
         sig = inspect.signature(method)
 
         parameter_models = [ParameterModel.new(param) for param in sig.parameters.values() if not param.name == 'self']
 
-        return ParameterList(parameters=[param for param in parameter_models if param is not None])
+        return [param for param in parameter_models if param is not None]
+
+    def get_method_info(self, method:Callable, plugin:type[BasePlugin]) -> MethodModel:
+        description = getattr(method, '_description', None) or self._first_doc_line(method) or getattr(plugin, 'description', None) or ""
+        icon = getattr(method, '_icon', None) or getattr(plugin, 'icon', None)
+
+        return MethodModel(description=description, icon=icon, parameters=self.get_args(method))
+
+    @staticmethod
+    def _first_doc_line(method:Callable) -> str:
+        doc = inspect.getdoc(method)
+        if not doc:
+            return ""
+        return doc.strip().splitlines()[0].strip()
 
     async def _publish(self):
         js = self.nc.jetstream()

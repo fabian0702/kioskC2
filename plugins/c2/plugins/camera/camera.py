@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class CameraPlugin(BasePlugin):
     name = "camera"
     js_file = "camera.js"
+    icon = "fa-camera"
 
+    @action(icon="fa-camera")
     async def capture(self, facing: str = "user", scale: float = 1.0) -> str:
         """Captures a photo from the device camera and returns it as a base64 JPEG.
 

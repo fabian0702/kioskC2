@@ -1,8 +1,10 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 class JSEvalPlugin(BasePlugin):
     name = "jseval"
+    icon = "fa-code"
 
+    @action(icon="fa-code")
     async def run(self, code: str) -> str:
         """Runs the provided code in the browser and returns the result"""
 

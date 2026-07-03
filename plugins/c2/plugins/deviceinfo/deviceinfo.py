@@ -1,9 +1,11 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class DeviceInfoPlugin(BasePlugin):
     name = "deviceinfo"
+    icon = "fa-microchip"
 
+    @action(icon="fa-microchip")
     async def capture(self) -> dict:
         """Returns a snapshot of the client's device and browser environment.
 
