@@ -1,4 +1,4 @@
-import { Component, signal, inject, OnInit, computed, effect } from '@angular/core';
+import { Component, signal, inject, OnInit, computed, effect, HostListener } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SocketService, CommandResult, MethodParameter, ClientInfo } from './services/socket.service';
 import { CommonModule, NgFor, NgIf, NgSwitch, NgSwitchCase, NgSwitchDefault, JsonPipe } from '@angular/common'; // added JsonPipe
@@ -141,6 +141,33 @@ export class App implements OnInit {
   methodActionLabel(key: string): string {
     const action = key.split('.')[1];
     return action ? this.titleCase(action) : '';
+  }
+
+  methodGroupLabel(key: string): string {
+    return this.titleCase(key.split('.')[0]);
+  }
+
+  actionMenuOpen = signal(false);
+
+  toggleActionMenu() {
+    this.actionMenuOpen.update(open => !open);
+  }
+
+  closeActionMenu() {
+    this.actionMenuOpen.set(false);
+  }
+
+  // Closes the dropdown on any click outside it - clicks inside the dropdown
+  // (trigger or panel) stop propagation in the template so they never reach
+  // here, only ones outside do.
+  @HostListener('document:click')
+  onDocumentClick() {
+    this.closeActionMenu();
+  }
+
+  selectMethodAndClose(methodName: string) {
+    this.selectMethod(methodName);
+    this.closeActionMenu();
   }
 
   selectMethod(methodName: string) {

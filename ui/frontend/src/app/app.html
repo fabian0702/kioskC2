@@ -82,23 +82,41 @@
           <div class="card-body">
             <div class="form-group">
               <label>Action</label>
-              <div class="action-groups">
-                <div *ngFor="let group of groupedMethods()" class="action-group">
-                  <div class="action-group-title">{{ group.label }}</div>
-                  <div class="action-grid">
+              <div class="action-select" (click)="$event.stopPropagation()">
+                <button
+                  type="button"
+                  class="action-dropdown-trigger"
+                  [class.open]="actionMenuOpen()"
+                  (click)="toggleActionMenu()">
+                  <ng-container *ngIf="selectedMethod(); else noActionSelected">
+                    <i class="fa-solid action-dropdown-icon" [ngClass]="methods()[selectedMethod()!].icon || 'fa-bolt'"></i>
+                    <span class="action-dropdown-label">
+                      <span class="action-dropdown-group">{{ methodGroupLabel(selectedMethod()!) }}</span>
+                      <span class="action-dropdown-name">{{ methodActionLabel(selectedMethod()!) }}</span>
+                    </span>
+                  </ng-container>
+                  <ng-template #noActionSelected>
+                    <span class="action-dropdown-placeholder">Select an action…</span>
+                  </ng-template>
+                  <i class="fa-solid fa-chevron-down action-dropdown-caret"></i>
+                </button>
+
+                <div class="action-dropdown-panel" *ngIf="actionMenuOpen()">
+                  <div *ngFor="let group of groupedMethods()" class="action-dropdown-group-block">
+                    <div class="action-dropdown-group-title">{{ group.label }}</div>
                     <button
                       *ngFor="let m of group.keys"
                       type="button"
-                      class="action-tile"
+                      class="action-dropdown-item"
                       [class.active]="selectedMethod() === m"
                       [title]="methods()[m].description"
-                      (click)="selectMethod(selectedMethod() === m ? '' : m)">
+                      (click)="selectMethodAndClose(m)">
                       <i class="fa-solid" [ngClass]="methods()[m].icon || 'fa-bolt'"></i>
-                      <span class="action-name">{{ methodActionLabel(m) }}</span>
+                      <span>{{ methodActionLabel(m) }}</span>
                     </button>
                   </div>
+                  <p *ngIf="methodKeys().length === 0" class="empty-logs">No actions available.</p>
                 </div>
-                <p *ngIf="methodKeys().length === 0" class="empty-logs">No actions available.</p>
               </div>
             </div>
 

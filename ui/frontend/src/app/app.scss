@@ -423,85 +423,140 @@
   }
 }
 
-.action-groups {
+.action-select {
+  position: relative;
+}
+
+.action-dropdown-trigger {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.4rem;
-  row-gap: 0.6rem;
-}
-
-// Let the grouping containers dissolve into the parent flex flow so a
-// category's tiles wrap right up against the next category's label instead
-// of each forcing its own full-width row - this is what actually saves the
-// vertical space, the label is just a small inline tag ahead of its tiles.
-.action-group {
-  display: contents;
-}
-
-.action-group-title {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--primary-color);
-  white-space: nowrap;
-  margin-left: 0.35rem;
-  padding-left: 0.6rem;
-  border-left: 1px solid var(--border-color);
-
-  &:first-child {
-    margin-left: 0;
-    padding-left: 0;
-    border-left: none;
-  }
-}
-
-.action-grid {
-  display: contents;
-}
-
-.action-tile {
-  display: inline-flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.7rem;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.15s;
   color: var(--text-main);
-  white-space: nowrap;
+  text-align: left;
 
-  i {
-    font-size: 0.9rem;
-    color: var(--text-secondary);
-    width: 1em;
+  .action-dropdown-icon {
+    font-size: 1rem;
+    color: var(--primary-color);
+    width: 1.1em;
     text-align: center;
+    flex-shrink: 0;
   }
 
-  .action-name {
-    font-size: 0.8rem;
+  .action-dropdown-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+  }
+
+  .action-dropdown-group {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+
+  .action-dropdown-name {
+    font-size: 0.9rem;
     font-weight: 500;
-    line-height: 1.2;
+  }
+
+  .action-dropdown-placeholder {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  .action-dropdown-caret {
+    margin-left: auto;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    transition: transform 0.15s;
+    flex-shrink: 0;
   }
 
   &:hover {
     border-color: var(--primary-color);
-    box-shadow: var(--shadow-sm, 0 1px 4px rgba(0, 0, 0, 0.08));
+  }
 
-    i {
-      color: var(--primary-color);
+  &.open {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+
+    .action-dropdown-caret {
+      transform: rotate(180deg);
     }
+  }
+}
+
+.action-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 340px;
+  overflow-y: auto;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 0.5rem;
+}
+
+.action-dropdown-group-block + .action-dropdown-group-block {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--border-color);
+}
+
+.action-dropdown-group-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary-color);
+  padding: 0.3rem 0.5rem;
+}
+
+.action-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  transition: background-color 0.1s;
+
+  i {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    width: 1.1em;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background-color: var(--bg-color, rgba(79, 70, 229, 0.08));
   }
 
   &.active {
     background: var(--primary-gradient);
-    border-color: var(--primary-color);
     color: white;
-    box-shadow: 0 3px 10px -2px rgba(79, 70, 229, 0.4);
 
     i {
       color: white;
