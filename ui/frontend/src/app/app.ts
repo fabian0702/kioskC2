@@ -31,6 +31,20 @@ export class App implements OnInit {
   
   methodKeys = computed(() => Object.keys(this.methods()));
 
+  groupedMethods = computed(() => {
+    const groups = new Map<string, string[]>();
+    for (const key of this.methodKeys()) {
+      const plugin = key.split('.')[0];
+      if (!groups.has(plugin)) groups.set(plugin, []);
+      groups.get(plugin)!.push(key);
+    }
+    return Array.from(groups.entries()).map(([plugin, keys]) => ({
+      plugin,
+      label: this.titleCase(plugin),
+      keys
+    }));
+  });
+
   lastCommandId = signal<string | null>(null);
   lastCommandResult = computed(() => {
     const id = this.lastCommandId();
@@ -40,12 +54,28 @@ export class App implements OnInit {
     return null;
   });
 
+  sortKey = signal<'completed' | 'scheduled'>('completed');
+  sortDir = signal<'desc' | 'asc'>('desc');
+
   allCommandResults = computed(() => {
     const results = Object.values(this.commandResults()) as CommandResult[];
-    results.sort((a, b) => (b.completedAt ?? b.timestamp) - (a.completedAt ?? a.timestamp));
-    console.log('Recomputed allCommandResults:', results);
+    const key = this.sortKey();
+    const dir = this.sortDir() === 'desc' ? -1 : 1;
+
+    const sortValue = (cmd: CommandResult) =>
+      key === 'completed' ? (cmd.completedAt ?? cmd.timestamp) : cmd.timestamp;
+
+    results.sort((a, b) => (sortValue(a) - sortValue(b)) * dir);
     return results;
   });
+
+  setSortKey(key: 'completed' | 'scheduled') {
+    this.sortKey.set(key);
+  }
+
+  toggleSortDir() {
+    this.sortDir.set(this.sortDir() === 'desc' ? 'asc' : 'desc');
+  }
 
   selectedClient = signal<string | null>(null);
   selectedMethod = signal<string | null>(null);
@@ -106,10 +136,6 @@ export class App implements OnInit {
 
   private titleCase(s: string): string {
     return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  methodPluginLabel(key: string): string {
-    return this.titleCase(key.split('.')[0]);
   }
 
   methodActionLabel(key: string): string {

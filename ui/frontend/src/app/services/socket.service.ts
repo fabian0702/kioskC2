@@ -138,9 +138,11 @@ export class SocketService extends Socket {
   }
 
   clearResults(clientId: string) {
-    const ids = Object.keys(this.commandResults());
-    ids.forEach(id => this.emit('result.delete', { client_id: clientId, result_id: id }));
+    // Clear the whole bucket server-side rather than deleting only the ids
+    // currently known client-side - avoids anything reappearing due to
+    // client/server desync (e.g. a result that arrived just before the clear).
     this.commandResults.set({});
+    this.emit('results.clear', clientId);
   }
 
   deleteResult(clientId: string, resultId: string) {

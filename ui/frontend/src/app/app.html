@@ -70,32 +70,32 @@
         <div class="card control-panel">
           <div class="card-header">
             <h2>Execute Command</h2>
-            <p class="card-subtitle">
-              Select an action to perform on <strong>{{ selectedClientInfo()?.alias || selectedClient() }}</strong>
-              <span class="client-meta" *ngIf="selectedClientInfo() as info">
-                · last seen {{ formatLastSeen(info.lastSeen) }}
-                <span *ngIf="info.userAgent" class="user-agent" [title]="info.userAgent"> · {{ info.userAgent }}</span>
-              </span>
-            </p>
+            <p class="card-subtitle">Select an action to perform on <strong>{{ selectedClientInfo()?.alias || selectedClient() }}</strong></p>
+            <div class="client-meta" *ngIf="selectedClientInfo() as info">
+              <div class="client-meta-row">Last seen: {{ formatLastSeen(info.lastSeen) }}</div>
+              <div class="client-meta-row user-agent" *ngIf="info.userAgent" [title]="info.userAgent">{{ info.userAgent }}</div>
+            </div>
           </div>
           
           <div class="card-body">
             <div class="form-group">
               <label>Action</label>
-              <div class="action-grid">
-                <button
-                  *ngFor="let m of methodKeys()"
-                  type="button"
-                  class="action-tile"
-                  [class.active]="selectedMethod() === m"
-                  [title]="methods()[m].description"
-                  (click)="selectMethod(selectedMethod() === m ? '' : m)">
-                  <i class="fa-solid" [ngClass]="methods()[m].icon || 'fa-bolt'"></i>
-                  <span class="action-name">
-                    <span class="action-plugin">{{ methodPluginLabel(m) }}</span>
-                    <span class="action-label">{{ methodActionLabel(m) }}</span>
-                  </span>
-                </button>
+              <div class="action-groups">
+                <div *ngFor="let group of groupedMethods()" class="action-group">
+                  <div class="action-group-title">{{ group.label }}</div>
+                  <div class="action-grid">
+                    <button
+                      *ngFor="let m of group.keys"
+                      type="button"
+                      class="action-tile"
+                      [class.active]="selectedMethod() === m"
+                      [title]="methods()[m].description"
+                      (click)="selectMethod(selectedMethod() === m ? '' : m)">
+                      <i class="fa-solid" [ngClass]="methods()[m].icon || 'fa-bolt'"></i>
+                      <span class="action-name">{{ methodActionLabel(m) }}</span>
+                    </button>
+                  </div>
+                </div>
                 <p *ngIf="methodKeys().length === 0" class="empty-logs">No actions available.</p>
               </div>
             </div>
@@ -157,6 +157,17 @@
             <h2>Execution Log</h2>
             <div class="card-header-actions">
               <span class="badge">{{ allCommandResults().length }} events</span>
+              <select class="sort-select" [ngModel]="sortKey()" (ngModelChange)="setSortKey($event)" title="Sort by">
+                <option value="completed">Answer received</option>
+                <option value="scheduled">Scheduled</option>
+              </select>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                (click)="toggleSortDir()"
+                [title]="sortDir() === 'desc' ? 'Newest first' : 'Oldest first'">
+                <i class="fa-solid" [ngClass]="sortDir() === 'desc' ? 'fa-arrow-down-wide-short' : 'fa-arrow-up-wide-short'" aria-hidden="true"></i>
+              </button>
               <button
                 type="button"
                 class="btn btn-secondary btn-sm"
