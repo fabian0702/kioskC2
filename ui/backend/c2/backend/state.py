@@ -35,7 +35,7 @@ class AppState:
 
     async def startup(self):
         print(f"Connecting to NATS at {NATS_URL}...")
-        self.nc = await nats.connect(NATS_URL)
+        self.nc = await self._connect_nats()
         self.js = self.nc.jetstream()
         
         self.method_kv = await self.get_or_create_kv('methods')
@@ -47,6 +47,17 @@ class AppState:
         self._client_disconnect_task = asyncio.create_task(self._client_disconnect_handler())
         self._plugin_loaded_task = asyncio.create_task(self._plugin_loaded_handler())
         self._plugin_response_task = asyncio.create_task(self._plugin_result_handler())
+
+    async def _connect_nats(self) -> NATS:
+        # depends_on only waits for the nats container to start, not for its
+        # JetStream API to actually be ready to accept connections - retry
+        # instead of letting a cold-start race crash the whole process.
+        while True:
+            try:
+                return await nats.connect(NATS_URL)
+            except Exception as e:
+                print(f"Failed to connect to NATS, retrying in 2s: {e}")
+                await asyncio.sleep(2)
 
     def on_client_connect(self, callback:Callable):
         self._on_client_connect_cb = callback

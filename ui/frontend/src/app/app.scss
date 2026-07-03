@@ -275,6 +275,14 @@
     }
   }
 
+  // The action dropdown panel is an absolutely-positioned overlay that needs
+  // to extend past the card's own (short) content height - the generic
+  // overflow:hidden above (there to keep the header/body clipped to the
+  // rounded corners) would otherwise cut it off.
+  &.control-panel {
+    overflow: visible;
+  }
+
   .card-header {
     padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--border-color);

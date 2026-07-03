@@ -1,3 +1,9 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   nats:
     image: nats
@@ -7,6 +13,7 @@ services:
     #   - "6222:6222"
     command: "-js -m 8222"
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - c2
 
@@ -15,6 +22,7 @@ services:
     depends_on:
       - nats
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - static_plugins:/static/plugins/
     networks:
@@ -30,6 +38,7 @@ services:
     depends_on:
       - nats
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - c2
 
@@ -38,6 +47,7 @@ services:
     depends_on:
       - nats
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./plugins/c2/plugins/:/code/c2/plugins/   # Enable hot-reloading of plugins
       - static_plugins:/static/
@@ -49,6 +59,7 @@ services:
     depends_on:
       - nats
     restart: unless-stopped
+    logging: *default-logging
     networks:
       - c2
     labels:
@@ -61,6 +72,7 @@ services:
     depends_on:
       - traefik
     restart: unless-stopped
+    logging: *default-logging
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
@@ -79,7 +91,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./traefik/traefik.yml:/traefik.yml
       - ./traefik/dynamic.yml:/dynamic.yml
-
+    logging: *default-logging
     networks:
       - c2
     restart: unless-stopped
