@@ -16,7 +16,7 @@ export class App implements OnInit {
   protected readonly title = signal('kiosk-frontend');
   protected socketService = inject(SocketService);
   private sanitizer = inject(DomSanitizer);
-  clientJoinUrl = `${window.location.protocol}//clients.${window.location.host}/`;
+  clientJoinUrl = `${window.location.protocol}//${window.location.host}/clients/`;
   
   messages = this.socketService.messages;
   clients = this.socketService.clients;
