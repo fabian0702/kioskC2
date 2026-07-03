@@ -134,6 +134,10 @@ async def delete_result(sid: str, data: dict):
     try:
         result_bucket = await state.get_or_create_kv(f"results_{client_id}")
         await result_bucket.purge(result_id)
+        # Tell the plugins service so it cancels the command if it's still
+        # running and never writes its result back, even if the client
+        # answers after we've already purged it here.
+        await state.nc.publish(f"client.cancel.{client_id}", result_id.encode())
     except Exception as e:
         print(f"Error deleting result {result_id} for client {client_id}: {e}")
 
@@ -149,6 +153,7 @@ async def clear_results(sid: str, client_id: str):
             keys = []
         for key in keys:
             await result_bucket.purge(key)
+            await state.nc.publish(f"client.cancel.{client_id}", key.encode())
     except Exception as e:
         print(f"Error clearing results for client {client_id}: {e}")
 

@@ -281,13 +281,21 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    
+
+    // .card-header lays its direct children out in a row (title block next to
+    // any header actions) - the title/subtitle/meta need their own column
+    // wrapper so *they* stack vertically instead of joining that row.
+    .card-header-main {
+      display: flex;
+      flex-direction: column;
+    }
+
     h2 {
       font-size: 1.1rem;
       color: var(--text-main);
       margin-bottom: 0.25rem;
     }
-    
+
     .card-subtitle {
       color: var(--text-secondary);
       font-size: 0.875rem;
@@ -296,6 +304,8 @@
 
     .client-meta {
       margin-top: 0.35rem;
+      display: flex;
+      flex-direction: column;
 
       .client-meta-row {
         font-size: 0.8rem;

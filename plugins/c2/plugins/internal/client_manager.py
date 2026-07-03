@@ -16,9 +16,14 @@ class Client:
         self.loaded_methods: MethodsDict = methods
         self.result_bucket = result_bucket
 
-        self.tasks:list[asyncio.Task] = []
+        self.tasks:dict[str, asyncio.Task] = {}
+        # ids the operator deleted before/while the command was running - once a
+        # message id lands here its result must never be (re)written, even if
+        # the client answers late or the cancellation couldn't interrupt it.
+        self.cancelled_ids:set[str] = set()
 
         self.handle_messages_task = asyncio.create_task(self.handle_messages())
+        self.handle_cancellations_task = asyncio.create_task(self.handle_cancellations())
 
     async def run_method(self, message: PluginMessage):
         """Handle an incoming message from the client."""
@@ -63,6 +68,10 @@ class Client:
     async def handle_message(self, message: PluginMessage):
         """Handle an incoming message from the client."""
         async def task_wrapper():
+            if message.id in self.cancelled_ids:
+                self.cancelled_ids.discard(message.id)
+                return
+
             pending_result = PluginMessage(client_id=message.client_id, operation=message.operation, state="pending", id=message.id)
             await self.result_bucket.put(message.id, pending_result.model_dump_json().encode())
             await self.nc.publish(f"plugin.response.{self.client_id}")
@@ -71,16 +80,42 @@ class Client:
 
             result = await self.run_method(message)
 
+            if message.id in self.cancelled_ids:
+                # Deleted while running (or while the cancellation was in
+                # flight) - drop the result instead of resurrecting an entry
+                # the operator already asked to get rid of.
+                self.cancelled_ids.discard(message.id)
+                return
+
             await self.result_bucket.put(message.id, result.model_dump_json().encode())
             await self.nc.publish(f"plugin.response.{self.client_id}")
 
         handle_message_task = asyncio.create_task(task_wrapper())
-        self.tasks.append(handle_message_task)
+        self.tasks[message.id] = handle_message_task
 
         def done_callback(task: asyncio.Task):
-            self.tasks.remove(task)
-        
+            self.tasks.pop(message.id, None)
+
         handle_message_task.add_done_callback(done_callback)
+
+    async def cancel_message(self, message_id: str):
+        """Cancel a pending/running command so it never (re)appears in the result bucket."""
+        self.cancelled_ids.add(message_id)
+
+        try:
+            await self.result_bucket.purge(message_id)
+        except Exception:
+            pass
+
+        task = self.tasks.get(message_id)
+        if task and not task.done():
+            task.cancel()
+
+    async def handle_cancellations(self):
+        """Listens for delete requests from the UI so in-flight commands can be cancelled."""
+        sub = await self.nc.subscribe(f"client.cancel.{self.client_id}")
+        async for msg in sub.messages:
+            await self.cancel_message(msg.data.decode())
 
     async def handle_messages(self):
         """Continuously handle incoming messages from the client."""
@@ -96,13 +131,14 @@ class Client:
             except Exception as e:
                 print(f"Failed to parse message for client {self.client_id} with error {e}")
                 continue
-            
+
             await self.handle_message(message)
 
     async def teardown(self):
         """Cancel all running tasks for this client."""
-        for task in self.tasks:
-            task.cancel() 
+        self.handle_cancellations_task.cancel()
+        for task in self.tasks.values():
+            task.cancel()
 
 
 class ClientManager:

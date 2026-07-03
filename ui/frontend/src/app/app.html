@@ -69,11 +69,13 @@
         <!-- Control Panel Card -->
         <div class="card control-panel">
           <div class="card-header">
-            <h2>Execute Command</h2>
-            <p class="card-subtitle">Select an action to perform on <strong>{{ selectedClientInfo()?.alias || selectedClient() }}</strong></p>
-            <div class="client-meta" *ngIf="selectedClientInfo() as info">
-              <div class="client-meta-row">Last seen: {{ formatLastSeen(info.lastSeen) }}</div>
-              <div class="client-meta-row user-agent" *ngIf="info.userAgent" [title]="info.userAgent">{{ info.userAgent }}</div>
+            <div class="card-header-main">
+              <h2>Execute Command</h2>
+              <p class="card-subtitle">Select an action to perform on <strong>{{ selectedClientInfo()?.alias || selectedClient() }}</strong></p>
+              <div class="client-meta" *ngIf="selectedClientInfo() as info">
+                <div class="client-meta-row">Last seen: {{ formatLastSeen(info.lastSeen) }}</div>
+                <div class="client-meta-row user-agent" *ngIf="info.userAgent" [title]="info.userAgent">{{ info.userAgent }}</div>
+              </div>
             </div>
           </div>
           
