@@ -6,16 +6,12 @@ import importlib
 import watchfiles
 import inspect
 
-import nats.js.errors
-
 from typing import Callable, Literal, Union, Optional, Any, get_origin, get_args
 
 from pydantic import BaseModel
 
-from nats import NATS
-
 from c2.plugins.internal.plugins import BasePlugin
-from c2.plugins.internal.utils import get_or_create_kv
+from c2.plugins.internal.transport import PluginTransport
 
 
 
@@ -80,8 +76,8 @@ Method = tuple[Callable, type[BasePlugin], MethodModel]
 MethodsDict = dict[str, Method]
 
 class Loader:
-    def __init__(self, nc:NATS, plugin_directory:str=PLUGIN_DIRECTORY):
-        self.nc = nc
+    def __init__(self, transport:PluginTransport, plugin_directory:str=PLUGIN_DIRECTORY):
+        self.transport = transport
         self.plugin_directory = plugin_directory
         
         self.load_plugins()
@@ -196,15 +192,5 @@ class Loader:
         return docs
 
     async def _publish(self):
-        js = self.nc.jetstream()
-
-        methods = await get_or_create_kv(js, "methods")
-        try:
-            for key in await methods.keys():
-                await methods.purge(key)
-        except nats.js.errors.NoKeysError:
-            pass
-        for name, (_, _, params) in self.methods.items():
-            await methods.put(name, params.model_dump_json().encode())
-
-        await self.nc.publish('plugins.loaded')
+        methods = {name: params.model_dump(mode="json") for name, (_, _, params) in self.methods.items()}
+        await self.transport.emit_methods_updated(methods)

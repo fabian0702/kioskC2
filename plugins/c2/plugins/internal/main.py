@@ -1,34 +1,21 @@
-import nats
 import asyncio
+import os
 
 from c2.plugins.internal.loader import Loader
 from c2.plugins.internal.client_manager import ClientManager
+from c2.plugins.internal.transport import PluginTransport
 
-
-async def connect_nats():
-    # depends_on only waits for the nats container to start, not for its
-    # JetStream API to actually be ready to accept connections - retry
-    # instead of letting a cold-start race crash the whole process.
-    while True:
-        try:
-            return await nats.connect("nats://nats:4222")
-        except Exception as e:
-            print(f"Failed to connect to NATS, retrying in 2s: {e}")
-            await asyncio.sleep(2)
+INTERNAL_HUB_TOKEN = os.environ["INTERNAL_HUB_TOKEN"]
 
 
 async def main():
-    nc = await connect_nats()
+    transport = PluginTransport(INTERNAL_HUB_TOKEN)
+    await transport.connect()
 
-    js = nc.jetstream()
+    loader = Loader(transport)
+    client_manager = ClientManager(transport, loader)
 
-    loader = Loader(nc)
-
-    await js.add_stream(name="plugins", subjects=["plugin.run.*", "plugin.response.>"])
-
-    client_manager = ClientManager(nc, loader)
-    await client_manager.run()
+    await transport.sio.wait()
 
 if __name__ == '__main__':
-    import asyncio
     asyncio.run(main())

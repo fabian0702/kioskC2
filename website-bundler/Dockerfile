@@ -27,4 +27,4 @@ RUN mkdir -p /code/c2/bundler && curl https://raw.githubusercontent.com/gildas-l
 
 COPY ./c2/ /code/c2/
 
-CMD ["python3", "c2/bundler/main.py"]
+CMD ["fastapi", "run", "c2/bundler/main.py"]
