@@ -155,7 +155,17 @@
         <div class="card terminal-card">
           <div class="card-header">
             <h2>Execution Log</h2>
-            <span class="badge">{{ allCommandResults().length }} events</span>
+            <div class="card-header-actions">
+              <span class="badge">{{ allCommandResults().length }} events</span>
+              <button
+                type="button"
+                class="btn btn-secondary btn-sm"
+                (click)="clearAllResults()"
+                [disabled]="allCommandResults().length === 0"
+                title="Clear all events">
+                <i class="fa-solid fa-trash" aria-hidden="true"></i> Clear
+              </button>
+            </div>
           </div>
           <div class="terminal-window">
             <div *ngFor="let cmd of allCommandResults()" class="log-entry">

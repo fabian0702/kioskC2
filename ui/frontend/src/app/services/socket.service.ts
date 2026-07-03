@@ -33,6 +33,7 @@ export interface CommandResult {
   operation: string;
   status: 'pending' | 'success' | 'error';
   timestamp: number;
+  completedAt?: number;
 }
 
 @Injectable({
@@ -98,12 +99,16 @@ export class SocketService extends Socket {
             return;
           }
 
+          const existing = this.commandResults()[id];
+          const status = this.mapResultStatus(result.state);
+
           mappedResults[id] = {
             id,
             result: result.data,
-            operation: result.operation || this.commandResults()[id]?.operation || 'unknown',
-            status: this.mapResultStatus(result.state),
-            timestamp: this.commandResults()[id]?.timestamp || Date.now() + index
+            operation: result.operation || existing?.operation || 'unknown',
+            status,
+            timestamp: existing?.timestamp || Date.now() + index,
+            completedAt: existing?.completedAt || (status !== 'pending' ? Date.now() + index : undefined)
           };
         });
 
@@ -130,6 +135,12 @@ export class SocketService extends Socket {
 
   renameClient(clientId: string, alias: string) {
     this.emit('client.rename', { client_id: clientId, alias });
+  }
+
+  clearResults(clientId: string) {
+    const ids = Object.keys(this.commandResults());
+    ids.forEach(id => this.emit('result.delete', { client_id: clientId, result_id: id }));
+    this.commandResults.set({});
   }
 
   deleteResult(clientId: string, resultId: string) {

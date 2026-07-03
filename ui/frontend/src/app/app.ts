@@ -42,7 +42,7 @@ export class App implements OnInit {
 
   allCommandResults = computed(() => {
     const results = Object.values(this.commandResults()) as CommandResult[];
-    results.sort((a, b) => b.timestamp - a.timestamp);
+    results.sort((a, b) => (b.completedAt ?? b.timestamp) - (a.completedAt ?? a.timestamp));
     console.log('Recomputed allCommandResults:', results);
     return results;
   });
@@ -223,6 +223,11 @@ export class App implements OnInit {
   deleteResult(id: string) {
     const client = this.selectedClient();
     if (client) this.socketService.deleteResult(client, id);
+  }
+
+  clearAllResults() {
+    const client = this.selectedClient();
+    if (client) this.socketService.clearResults(client);
   }
 
   confirmDelete() {
