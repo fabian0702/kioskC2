@@ -21,7 +21,7 @@ class WebsocketPlugin extends CommunicationPlugin {
 
         const client_id = window.location.pathname.match(/\/clients\/([^\/]+)/)[1];
 
-        this.send({client: client_id})
+        this.send({client: client_id, userAgent: navigator.userAgent})
     }
 
     on_msg(_callback) {

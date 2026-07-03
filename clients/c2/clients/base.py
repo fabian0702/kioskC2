@@ -36,6 +36,7 @@ class Client:
         self.status:Literal["connected", "disconnected"] = "connected"
         self.queued_requests: list[ClientRunMessage] = []
         self.last_heartbeat = time.time()
+        self.user_agent: Optional[str] = None
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -70,8 +71,9 @@ class Client:
 class ClientManager:
     def __init__(self):
         self.on_msg_callback:Callable[[str, ClientRunMessage], None] = None
-        self.on_disconnect_callback:Callable[[str], None] = None
-        self.on_connect_callback:Callable[[str], None] = None
+        self.on_disconnect_callback:Callable[[str, float, Optional[str]], None] = None
+        self.on_connect_callback:Callable[[str, Optional[str]], None] = None
+        self.on_heartbeat_callback:Callable[[str, float, Optional[str]], None] = None
         self.clients: dict[str, Client] = {}
         self.router = APIRouter(prefix="/clients")
 
@@ -80,10 +82,12 @@ class ClientManager:
             while True:
                 for id, client in self.clients.items():
                     if time.time() - client.last_heartbeat < CLIENT_HEARTBEAT_TIMEOUT:
+                        if client.status == 'connected':
+                            await run_callback(self.on_heartbeat_callback, id, client.last_heartbeat, client.user_agent)
                         continue
-                    
+
                     if client.status == 'connected':
-                        await run_callback(self.on_disconnect_callback, id)
+                        await run_callback(self.on_disconnect_callback, id, client.last_heartbeat, client.user_agent)
 
                     client.status = 'disconnected'
 
@@ -94,11 +98,14 @@ class ClientManager:
     def on_msg(self, callback:Callable[[str, ClientRunMessage], None]):
         self.on_msg_callback = callback
 
-    def on_disconnect(self, callback:Callable[[str], None]):
+    def on_disconnect(self, callback:Callable[[str, float, Optional[str]], None]):
         self.on_disconnect_callback = callback
 
-    def on_connect(self, callback:Callable[[str], None]):
+    def on_connect(self, callback:Callable[[str, Optional[str]], None]):
         self.on_connect_callback = callback
+
+    def on_heartbeat(self, callback:Callable[[str, float, Optional[str]], None]):
+        self.on_heartbeat_callback = callback
 
     async def msg_call(self, id:str, msg:ClientRunMessage):
         print(f"ClientManager received message for client {id}: {msg}")
@@ -136,7 +143,8 @@ class ClientManager:
             case "heartbeat":
                 return self.handle_heartbeat(client_id, message)
             case 'connect':
-                await run_callback(self.on_connect_callback, client_id)
+                client = self.get_client(client_id)
+                await run_callback(self.on_connect_callback, client_id, client.user_agent)
             case _:
                 await self.msg_call(client_id, message)
 
