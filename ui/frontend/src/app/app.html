@@ -54,21 +54,28 @@
           
           <div class="card-body">
             <div class="form-group">
-              <label>Method</label>
-              <select 
-                [ngModel]="selectedMethod()" 
-                (ngModelChange)="selectMethod($event)"
-                class="form-select">
-                <option [ngValue]="null">Select a method...</option>
-                <option *ngFor="let m of methodKeys()" [ngValue]="m">{{ m }}</option>
-              </select>
+              <label>Action</label>
+              <div class="action-grid">
+                <button
+                  *ngFor="let m of methodKeys()"
+                  type="button"
+                  class="action-tile"
+                  [class.active]="selectedMethod() === m"
+                  [title]="methods()[m].description"
+                  (click)="selectMethod(selectedMethod() === m ? '' : m)">
+                  <i class="fa-solid" [ngClass]="methods()[m].icon || 'fa-bolt'"></i>
+                  <span class="action-name">{{ formatMethodName(m) }}</span>
+                </button>
+                <p *ngIf="methodKeys().length === 0" class="empty-logs">No actions available.</p>
+              </div>
             </div>
 
             <div *ngIf="selectedMethod()" class="method-params">
               <div class="params-header">
                 <h3>Parameters</h3>
+                <p class="params-description">{{ methods()[selectedMethod()!].description }}</p>
               </div>
-              
+
               <div class="params-grid">
                 <div *ngFor="let param of methods()[selectedMethod()!].parameters" class="form-group">
                   <label>{{ param.name }} <span class="param-type">{{ param.type }}</span></label>

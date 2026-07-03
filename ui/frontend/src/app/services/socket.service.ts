@@ -9,6 +9,8 @@ export interface MethodParameter {
 }
 
 export interface MethodDefinition {
+  description: string;
+  icon?: string | null;
   parameters: MethodParameter[];
 }
 

@@ -64,10 +64,16 @@ export class App implements OnInit {
     this.socketService.setActiveClient(client);
   }
 
+  formatMethodName(key: string): string {
+    const [plugin, action] = key.split('.');
+    const titleCase = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    return action ? `${titleCase(plugin)} · ${titleCase(action)}` : titleCase(plugin);
+  }
+
   selectMethod(methodName: string) {
-    if (!methodName) { 
-        this.selectedMethod.set(null); 
-        return; 
+    if (!methodName) {
+        this.selectedMethod.set(null);
+        return;
     }
     this.selectedMethod.set(methodName);
     
