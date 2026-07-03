@@ -118,7 +118,7 @@ class AppState:
             return
         
         await self.client_kv.purge(client_id)
-        await self.nc.publish('client.disconnect')
+        await self.nc.publish('client.disconnect', client_id.encode())
     
     async def get_or_create_kv(self, bucket_name: str) -> KeyValue:
         """Internal helper to fetch or create a KV bucket."""
