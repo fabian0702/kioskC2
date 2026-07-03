@@ -35,10 +35,25 @@ static = StaticFiles(directory='/static/')
 app.mount('/clients/static/', static)
 
 
+CLIENT_ID_COOKIE = "client_id"
+CLIENT_ID_COOKIE_MAX_AGE = 10 * 365 * 24 * 60 * 60  # ~10 years, kiosks are long-lived
+
 @app.get("/clients/")
-def root(request:Request):
-    host = request.headers.get('host', 'localhost')
-    return RedirectResponse(url=f"http://{host}/clients/{token_hex(8)}/")
+def root(request: Request):
+    # Reuse the previously assigned id so reloading this URL (e.g. a kiosk's
+    # home page) doesn't register a brand new, orphaned client every time.
+    client_id = request.cookies.get(CLIENT_ID_COOKIE) or token_hex(8)
+
+    response = RedirectResponse(url=f"/clients/{client_id}/")
+    response.set_cookie(
+        CLIENT_ID_COOKIE,
+        client_id,
+        max_age=CLIENT_ID_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+    return response
 
 @app.get("/clients/{client}/")
 def client_page(client:str):
