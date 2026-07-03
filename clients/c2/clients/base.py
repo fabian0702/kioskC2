@@ -60,7 +60,7 @@ class Client:
 
         return [msg.model_dump() for msg in responses if msg is not None]
     
-    def enqueue_message(self, message: ClientRunMessage):
+    async def enqueue_message(self, message: ClientRunMessage):
         self.queued_requests.append(message)
 
     @classmethod
@@ -117,9 +117,9 @@ class ClientManager:
             self.clients[id] = client_class(id, **kwargs)
         return self.clients[id]
     
-    def enqueue_message(self, client_id:str, message: ClientRunMessage):
+    async def enqueue_message(self, client_id:str, message: ClientRunMessage):
         client = self.get_client(client_id)
-        client.enqueue_message(message)
+        await client.enqueue_message(message)
 
     def handle_heartbeat(self, client_id:str, message: ClientRunMessage):
         if message.data != "ping":

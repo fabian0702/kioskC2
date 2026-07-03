@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException
-from c2.clients.base import Client
+from c2.clients.base import Client, ClientRunMessage
 from fastapi import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
 class WSClient(Client):
     router = APIRouter(prefix="/ws")
+
+    websocket: WebSocket
 
     @staticmethod
     @router.websocket("/")
@@ -17,7 +19,9 @@ class WSClient(Client):
             raise HTTPException(400, 'missing client identification')
         
         client_id = client_identification.get('client')
-        client = WSClient.get_client(client_id)
+        client:WSClient = WSClient.get_client(client_id)
+
+        client.websocket = websocket
 
         print(f'got connection from client {client.id}')
 
@@ -28,3 +32,7 @@ class WSClient(Client):
                 await websocket.send_json(response)
         except WebSocketDisconnect:
             print(f'client {client.id} disconnected')
+
+
+    async def enqueue_message(self, message:ClientRunMessage):
+        self.websocket.send_json([message.model_dump()])

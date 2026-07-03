@@ -59,7 +59,7 @@ async def run_nats():
                 print(f"Failed to parse message for client {id} with error {e}")
                 continue
             
-            client_manager.enqueue_message(id, parsed_msg)
+            await client_manager.enqueue_message(id, parsed_msg)
     except asyncio.CancelledError:
         await sub.unsubscribe()
         await nc.drain()
