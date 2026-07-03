@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 from base64 import b64encode, b64decode
 
 class WebsitePlugin(BasePlugin):
     name = "website"
     js_file = "website.js"
+    icon = "fa-window-maximize"
 
+    @action(icon="fa-window-maximize", output="text")
     async def render(self, url: str, bundle:bool = True) -> str:
         """Fetches the content of the given URL and returns it as a string."""
 

@@ -1,9 +1,11 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class ClipboardPlugin(BasePlugin):
     name = "clipboard"
+    icon = "fa-clipboard"
 
+    @action(icon="fa-clipboard", output="text")
     async def read(self) -> str:
         """Reads the current clipboard text.
 
@@ -16,6 +18,7 @@ class ClipboardPlugin(BasePlugin):
             'return navigator.clipboard.readText();'
         )
 
+    @action(icon="fa-paste")
     async def write(self, text: str) -> None:
         """Writes text to the clipboard.
 

@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class ScreenshotPlugin(BasePlugin):
     name = "screenshot"
     js_file = "screenshot.js"
+    icon = "fa-image"
 
+    @action(icon="fa-image", output="image")
     async def capture(self, scale: float = 0.5) -> str:
         """Captures a screenshot of the current client view and returns it as a base64 JPEG.
 

@@ -1,9 +1,11 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class GeolocationPlugin(BasePlugin):
     name = "geolocation"
+    icon = "fa-location-dot"
 
+    @action(icon="fa-location-dot", output="json")
     async def locate(self) -> dict:
         """Returns the client's current geographic position via the Geolocation API.
 

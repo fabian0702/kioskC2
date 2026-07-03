@@ -11,7 +11,6 @@ from c2.backend.state import AppState
 
 
 static_files = {
-    '/': '/frontend/index.html',
     '/': '/frontend/',
 }
 
@@ -34,9 +33,23 @@ state.on_plugin_response(plugin_response)
 async def request_clients():
     print("Requesting clients...")
     try:
-        clients = {key: (await state.client_kv.get(key)).value.decode() for key in await state.client_kv.keys()}
+        keys = await state.client_kv.keys()
     except NoKeysError:
-        clients = {}
+        keys = []
+
+    clients = {}
+    for key in keys:
+        entry = await state.client_kv.get(key)
+        raw = entry.value.decode() if entry.value else ""
+        try:
+            info = json.loads(raw)
+            if not isinstance(info, dict):
+                info = {"status": raw}
+        except ValueError:
+            info = {"status": raw}
+
+        info["alias"] = await state.get_alias(key)
+        clients[key] = info
 
     await sio.emit('clients.response', clients)
 
@@ -101,6 +114,16 @@ async def get_methods(sid: str):
 @sio.on('client.remove')
 async def remove_client(sid: str, client_id: str):
     await state.remove_client(client_id)
+    await request_clients()
+
+@sio.on('client.rename')
+async def rename_client(sid: str, data: dict):
+    client_id = data.get('client_id')
+    alias = data.get('alias', '')
+    if not client_id:
+        return
+    await state.set_alias(client_id, alias)
+    await request_clients()
 
 @sio.on('result.delete')
 async def delete_result(sid: str, data: dict):

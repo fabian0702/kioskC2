@@ -18,6 +18,10 @@ class WebsocketPlugin extends CommunicationPlugin {
             console.error("WebsocketPlugin: WebSocket error", err);
             this.ws = null;
         });
+
+        const client_id = window.location.pathname.match(/\/clients\/([^\/]+)/)[1];
+
+        this.send({client: client_id, userAgent: navigator.userAgent})
     }
 
     on_msg(_callback) {

@@ -7,7 +7,7 @@ from nats import NATS
 from nats.js import JetStreamContext
 from nats.js.kv import KeyValue
 from nats.js.api import KeyValueConfig
-from nats.js.errors import BucketNotFoundError
+from nats.js.errors import BucketNotFoundError, KeyNotFoundError
 
 
 NATS_URL = "nats://nats:4222"
@@ -23,6 +23,7 @@ class AppState:
         self.js: Optional[JetStreamContext] = None
         self.method_kv: Optional[KeyValue] = None
         self.client_kv: Optional[KeyValue] = None
+        self.alias_kv: Optional[KeyValue] = None
         self._on_client_connect_cb: Optional[Callable] = None
         self._on_client_disconnect_cb: Optional[Callable] = None
         self._on_plugin_loaded_cb: Optional[Callable] = None
@@ -39,6 +40,7 @@ class AppState:
         
         self.method_kv = await self.get_or_create_kv('methods')
         self.client_kv = await self.get_or_create_kv('clients')
+        self.alias_kv = await self.get_or_create_kv('client_aliases')
         print("Startup complete")
 
         self._client_connect_task = asyncio.create_task(self._client_connect_handler())
@@ -116,10 +118,37 @@ class AppState:
     async def remove_client(self, client_id: str):
         if not self.client_kv:
             return
-        
+
         await self.client_kv.purge(client_id)
-        await self.nc.publish('client.disconnect')
-    
+        if self.alias_kv:
+            try:
+                await self.alias_kv.purge(client_id)
+            except KeyNotFoundError:
+                pass
+        await self.nc.publish('client.disconnect', client_id.encode())
+
+    async def get_alias(self, client_id: str) -> Optional[str]:
+        if not self.alias_kv:
+            return None
+        try:
+            entry = await self.alias_kv.get(client_id)
+            return entry.value.decode() if entry.value else None
+        except KeyNotFoundError:
+            return None
+
+    async def set_alias(self, client_id: str, alias: str):
+        if not self.alias_kv:
+            return
+
+        alias = alias.strip()
+        if alias:
+            await self.alias_kv.put(client_id, alias.encode())
+        else:
+            try:
+                await self.alias_kv.purge(client_id)
+            except KeyNotFoundError:
+                pass
+
     async def get_or_create_kv(self, bucket_name: str) -> KeyValue:
         """Internal helper to fetch or create a KV bucket."""
         if not self.js:

@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class IdlePlugin(BasePlugin):
     name = "idle"
     js_file = "idle.js"
+    icon = "fa-clock"
 
+    @action(icon="fa-clock", output="text")
     async def get_idle_time(self) -> float:
         """Returns the number of seconds since the user last interacted with the page.
 
@@ -17,6 +19,7 @@ class IdlePlugin(BasePlugin):
         """
         return await self.methods.eval_js('return window.getIdleTime();')
 
+    @action(icon="fa-arrow-rotate-left")
     async def reset(self) -> None:
         """Resets the idle timer as if the user just interacted with the page.
         """

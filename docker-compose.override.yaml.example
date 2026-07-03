@@ -1,0 +1,21 @@
+# Copy this file to docker-compose.override.yaml (gitignored) on hosts that
+# already have their own reverse proxy (e.g. zoraxy, Caddy, another nginx)
+# occupying ports 80/443. It disables this project's bundled nginx/TLS
+# container and exposes Traefik on a local port for that external proxy to
+# forward to instead, and swaps in a prod-specific OIDC config (see
+# traefik/dynamic.prod.yml.example).
+#
+# Run with:
+#   docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up --build -d
+
+services:
+  nginx:
+    # Not started by a plain `docker compose up` unless --profile with-nginx
+    # is passed - this host's external proxy handles TLS termination instead.
+    profiles: ["with-nginx"]
+
+  traefik:
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./traefik/dynamic.prod.yml:/dynamic.yml

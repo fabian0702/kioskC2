@@ -21,7 +21,7 @@ services:
       - c2
     labels:
       - traefik.http.services.clients.loadbalancer.server.port=8000
-      - traefik.http.routers.clients.rule=HostRegexp(`[0-9a-f]{16}\..*`) || HostRegexp(`clients\..*`)
+      - traefik.http.routers.clients.rule=PathPrefix(`/clients`)
       - traefik.enable=true
 
 
@@ -71,7 +71,7 @@ services:
       c2:
         aliases:
           - auth.localhost       # traefik resolves this to reach dex via nginx→traefik→dex
-          - auth.kiosk.fabi07.ch
+          - auth.kiosk.mnta.in
 
   traefik:
     image: traefik:3.6

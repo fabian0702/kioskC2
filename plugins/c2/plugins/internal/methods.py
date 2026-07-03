@@ -55,7 +55,7 @@ class Methods:
 
         hash = sha256(content).hexdigest()
         file_path = f'/static/{hash}'
-        serve_path = f"/static/plugins/{hash}"
+        serve_path = f"/clients/static/plugins/{hash}"
 
         if extension:
             file_path += '.' + extension

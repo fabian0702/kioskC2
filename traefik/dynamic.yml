@@ -10,9 +10,8 @@ http:
             InsecureSkipVerify: true
           LogLevel: DEBUG
           BypassAuthenticationRule: >
-            PathPrefix(`/client`) ||
-            Host(`auth.localhost`) || Host(`auth.kiosk.mnta.in`) ||
-            HostRegexp(`[0-9a-f]{16}\..*`) || HostRegexp(`clients\..*`)
+            PathPrefix(`/clients`) ||
+            Host(`auth.localhost`) || Host(`auth.kiosk.mnta.in`)
           Scopes:
             - openid
             - profile

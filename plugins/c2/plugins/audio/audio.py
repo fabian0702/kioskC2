@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class AudioPlugin(BasePlugin):
     name = "audio"
     js_file = "audio.js"
+    icon = "fa-microphone"
 
+    @action(icon="fa-microphone", output="audio")
     async def record(self, duration: float = 5.0) -> str:
         """Records audio from the client's microphone and returns it as a base64 data URL.
 

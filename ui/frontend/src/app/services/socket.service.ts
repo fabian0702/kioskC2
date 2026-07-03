@@ -6,9 +6,15 @@ export interface MethodParameter {
   name: string;
   type: string;
   default: any;
+  choices?: any[] | null;
+  multiline?: boolean;
+  description?: string;
 }
 
 export interface MethodDefinition {
+  description: string;
+  icon?: string | null;
+  output?: 'text' | 'json' | 'image' | 'audio' | 'code' | null;
   parameters: MethodParameter[];
 }
 
@@ -16,6 +22,9 @@ export interface ClientInfo {
   id: string;
   connected: boolean;
   status: string;
+  alias?: string | null;
+  lastSeen?: number | null;
+  userAgent?: string | null;
 }
 
 export interface CommandResult {
@@ -24,6 +33,7 @@ export interface CommandResult {
   operation: string;
   status: 'pending' | 'success' | 'error';
   timestamp: number;
+  completedAt?: number;
 }
 
 @Injectable({
@@ -89,12 +99,16 @@ export class SocketService extends Socket {
             return;
           }
 
+          const existing = this.commandResults()[id];
+          const status = this.mapResultStatus(result.state);
+
           mappedResults[id] = {
             id,
             result: result.data,
-            operation: result.operation || this.commandResults()[id]?.operation || 'unknown',
-            status: this.mapResultStatus(result.state),
-            timestamp: this.commandResults()[id]?.timestamp || Date.now() + index
+            operation: result.operation || existing?.operation || 'unknown',
+            status,
+            timestamp: existing?.timestamp || Date.now() + index,
+            completedAt: existing?.completedAt || (status !== 'pending' ? Date.now() + index : undefined)
           };
         });
 
@@ -117,6 +131,16 @@ export class SocketService extends Socket {
 
   removeClient(clientId: string) {
     this.emit('client.remove', clientId);
+  }
+
+  renameClient(clientId: string, alias: string) {
+    this.emit('client.rename', { client_id: clientId, alias });
+  }
+
+  clearResults(clientId: string) {
+    const ids = Object.keys(this.commandResults());
+    ids.forEach(id => this.emit('result.delete', { client_id: clientId, result_id: id }));
+    this.commandResults.set({});
   }
 
   deleteResult(clientId: string, resultId: string) {
@@ -209,10 +233,14 @@ export class SocketService extends Socket {
 
     return Object.entries(candidate).map(([id, value]) => {
       const status = this.extractClientStatus(value);
+      const obj = (value && typeof value === 'object' && !Array.isArray(value)) ? value as Record<string, any> : {};
       return {
         id,
         connected: status === 'connected',
-        status
+        status,
+        alias: typeof obj['alias'] === 'string' && obj['alias'].length ? obj['alias'] : null,
+        lastSeen: typeof obj['last_seen'] === 'number' ? obj['last_seen'] : null,
+        userAgent: typeof obj['user_agent'] === 'string' ? obj['user_agent'] : null,
       };
     });
   }

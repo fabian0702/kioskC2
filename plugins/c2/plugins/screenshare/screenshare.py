@@ -1,10 +1,12 @@
-from c2.plugins.internal.plugins import BasePlugin
+from c2.plugins.internal.plugins import BasePlugin, action
 
 
 class ScreenSharePlugin(BasePlugin):
     name = "screenshare"
     js_file = "screenshare.js"
+    icon = "fa-desktop"
 
+    @action(icon="fa-desktop", output="image")
     async def capture(self, scale: float = 1.0) -> str:
         """Captures a single frame of the screen/window/tab selected by the user
         via the browser's Screen Capture API (getDisplayMedia) and returns it as
