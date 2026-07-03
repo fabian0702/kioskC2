@@ -1,0 +1,26 @@
+# Prod-only OIDC config. Copy this file to traefik/dynamic.prod.yml
+# (gitignored) and fill in your real IdP details. It's mounted in place of
+# the dev-default traefik/dynamic.yml (which points at the local Dex
+# instance) by docker-compose.override.yaml.
+http:
+  middlewares:
+    oidc-auth:
+      plugin:
+        traefik-oidc-auth:
+          Provider:
+            Url: https://idp.example.com/application/o/your-app/
+            ClientId: CHANGEME
+            ClientSecret: CHANGEME
+            # TODO: set to false once the IdP's cert is verifiable from inside the container
+            InsecureSkipVerify: true
+          LogLevel: DEBUG
+          BypassAuthenticationRule: >
+            PathPrefix(`/clients`) ||
+            Host(`auth.localhost`) || Host(`auth.example.com`)
+          Scopes:
+            - openid
+            - profile
+            - email
+          SessionCookie:
+            # TODO: set to true once served consistently over HTTPS end-to-end
+            Secure: false

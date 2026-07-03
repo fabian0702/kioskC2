@@ -20,7 +20,7 @@ providers:
     exposedByDefault: false
   file:
     filename: /dynamic.yml
-    
+
 experimental:
   plugins:
     traefik-oidc-auth:

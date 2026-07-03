@@ -43,7 +43,7 @@ Dex config lives in `dex/config.yml`. It ships with one static user:
 
 The traefik-oidc-auth middleware is wired to Dex. Any request to the stack that isn't under `/client` will trigger an auth redirect. Log in with the credentials above and you're through.
 
-To swap in a real IdP later, update `Provider.Url`, `ClientId`, and `ClientSecret` in `traefik/dynamic.yml` and remove or replace the `dex` service from `docker-compose.yaml`.
+To swap in a real IdP for production, see the "Production deployment" section below rather than editing this file directly - `traefik/dynamic.yml` is the tracked local-dev default and is expected to keep pointing at Dex.
 
 ---
 
@@ -54,3 +54,33 @@ Make sure `auth.localhost` (and any other `*.localhost` subdomains you use) reso
 ```
 echo "127.0.0.1 auth.localhost" | sudo tee -a /etc/hosts
 ```
+
+---
+
+## Production deployment
+
+Production runs `docker-compose.prod.yaml` directly (not the top-level
+`docker-compose.yaml` - that file only adds the local Dex/mkcert dev extras).
+On a host that already has its own reverse proxy on ports 80/443 (e.g.
+zoraxy, Caddy, another nginx), this project's bundled `nginx` container and
+local Dex are not used at all; instead:
+
+1. Copy the templates and fill in real values (both are gitignored, so they
+   survive `git pull` untouched):
+   ```
+   cp docker-compose.override.yaml.example docker-compose.override.yaml
+   cp traefik/dynamic.prod.yml.example traefik/dynamic.prod.yml
+   ```
+2. Edit `traefik/dynamic.prod.yml` with your real IdP's `Provider.Url`,
+   `ClientId`, `ClientSecret`, and `BypassAuthenticationRule` host.
+3. Edit `docker-compose.override.yaml`'s `traefik.ports` if you want the
+   external proxy to reach Traefik on something other than `127.0.0.1:8080`.
+4. Run with both files:
+   ```
+   docker compose -f docker-compose.prod.yaml -f docker-compose.override.yaml up --build -d
+   ```
+
+`docker-compose.prod.yaml` and `traefik/dynamic.yml` stay as the generic,
+tracked defaults (nginx included, Dex-based auth) for anyone self-hosting
+without a pre-existing reverse proxy - just run
+`docker compose -f docker-compose.prod.yaml up --build -d` with no override.

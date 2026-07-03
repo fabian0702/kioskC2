@@ -5,3 +5,7 @@
 **/*.min.js.map
 client-builder/src/plugins/
 .venv
+
+# Environment-specific prod config (real secrets/topology) - see .example files
+/docker-compose.override.yaml
+/traefik/dynamic.prod.yml
